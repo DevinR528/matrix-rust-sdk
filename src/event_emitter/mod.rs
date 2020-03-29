@@ -16,28 +16,6 @@
 use crate::events::collections::all::RoomEvent;
 use crate::models::Room;
 
-// JUST AN IDEA
-//
-
-/// This is just a thought I had. Making users impl a trait instead of writing callbacks for events
-/// could give the chance for really good documentation for each event?
-/// It would look something like this
-///
-/// ```rust,ignore
-/// use matrix-sdk::{AsyncClient, EventEmitter};
-///
-/// struct MyAppClient;
-///
-/// impl EventEmitter for MyAppClient {
-///     fn on_room_member(&mut self, room: &Room, event: &RoomEvent) { ... }
-/// }
-/// async fn main() {
-///     let cl = AsyncClient::with_emitter(MyAppClient);
-/// }
-/// ```
-///
-/// And in `AsyncClient::sync` there could be a switch case that calls the corresponding method on
-/// the `Box<dyn EventEmitter>
 pub trait EventEmitter {
     fn on_room_name(&mut self, _: &Room, _: &RoomEvent) {}
     /// Any event that alters the state of the room's members
