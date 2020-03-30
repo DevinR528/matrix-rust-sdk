@@ -17,7 +17,7 @@ use crate::events::collections::all::RoomEvent;
 use crate::models::Room;
 
 ///
-pub trait EventEmitter {
+pub trait EventEmitter: Send + Sync {
     /// 
     fn on_room_name(&mut self, _: &Room, _: &RoomEvent) {}
     /// Any event that alters the state of the room's members
