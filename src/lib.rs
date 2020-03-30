@@ -46,6 +46,7 @@ mod crypto;
 
 pub use async_client::{AsyncClient, AsyncClientConfig, SyncSettings};
 pub use base_client::Client;
+pub use event_emitter::EventEmitter;
 pub use models::Room;
 
 pub(crate) const VERSION: &str = env!("CARGO_PKG_VERSION");
