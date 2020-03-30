@@ -41,7 +41,7 @@ use crate::base_client::Client as BaseClient;
 use crate::models::Room;
 use crate::session::Session;
 use crate::VERSION;
-use crate::{Error, Result};
+use crate::{EventEmitter, Error, Result};
 
 type RoomEventCallback = Box<
     dyn FnMut(Arc<SyncLock<Room>>, Arc<EventResult<RoomEvent>>) -> BoxFuture<'static, ()> + Send,
@@ -65,6 +65,9 @@ pub struct AsyncClient {
     base_client: Arc<RwLock<BaseClient>>,
     /// The transaction id.
     transaction_id: Arc<AtomicU64>,
+    /// Any implementor of EventEmitter will act as the callbacks for various
+    /// events.
+    event_emitter: Option<Arc<Mutex<dyn EventEmitter>>>,
     /// Event callbacks
     event_callbacks: Arc<Mutex<Vec<RoomEventCallback>>>,
     presence_callbacks: Arc<Mutex<Vec<PresenceEventCallback>>>,
@@ -251,6 +254,7 @@ impl AsyncClient {
             http_client,
             base_client: Arc::new(RwLock::new(BaseClient::new(session)?)),
             transaction_id: Arc::new(AtomicU64::new(0)),
+            event_emitter: None,
             event_callbacks: Arc::new(Mutex::new(Vec::new())),
             presence_callbacks: Arc::new(Mutex::new(Vec::new())),
         })
@@ -575,6 +579,24 @@ impl AsyncClient {
         client.receive_sync_response(&mut response).await;
 
         Ok(response)
+    }
+
+    /// Synchronise the client's state with the latest state on the server using the `EventEmitter`
+    /// trait.
+    ///
+    /// # Arguments
+    ///
+    /// * `sync_settings` - Settings for the sync call.
+    /// * `event_emitter` - implementors of the `EventEmitter` trait to handle state callbacks.
+    // #[instrument]
+    pub async fn sync_with(
+        &mut self,
+        sync_settings: SyncSettings,
+        event_emitter: Arc<Mutex<dyn EventEmitter>>,
+    ) -> Result<()> {
+        self.event_emitter = Some(event_emitter);
+
+        self.sync(sync_settings).await.map(|_res| ())
     }
 
     /// Repeatedly call sync to synchronize the client state with the server.
