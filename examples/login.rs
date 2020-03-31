@@ -47,7 +47,9 @@ async fn login(
     let homeserver_url = Url::parse(&homeserver_url)?;
     let mut client = AsyncClient::new_with_config(homeserver_url, None, client_config).unwrap();
 
-    client.add_event_emitter(Arc::new(Mutex::new(EventCallback))).await;
+    client
+        .add_event_emitter(Arc::new(Mutex::new(EventCallback)))
+        .await;
 
     client
         .login(username, password, None, Some("rust-sdk".to_string()))
@@ -72,6 +74,6 @@ async fn main() -> Result<(), matrix_sdk::Error> {
                 exit(1)
             }
         };
-    
+
     login(homeserver_url, username, password).await
 }

@@ -38,7 +38,7 @@ use crate::api;
 use crate::base_client::Client as BaseClient;
 use crate::session::Session;
 use crate::VERSION;
-use crate::{EventEmitter, Error, Result};
+use crate::{Error, EventEmitter, Result};
 
 const DEFAULT_SYNC_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -202,6 +202,7 @@ impl AsyncClient {
         session: Option<Session>,
         config: AsyncClientConfig,
     ) -> Result<Self> {
+        #[allow(clippy::match_wild_err_arm)]
         let homeserver: Url = match homeserver_url.try_into() {
             Ok(u) => u,
             Err(_e) => panic!("Error parsing homeserver url"),
@@ -252,7 +253,7 @@ impl AsyncClient {
     }
 
     /// Add `EventEmitter` to `AsyncClient`.
-    /// 
+    ///
     /// The methods of `EventEmitter` are called when the respective `RoomEvents` occur.
     pub async fn add_event_emitter(&mut self, emitter: Arc<Mutex<dyn EventEmitter>>) {
         self.base_client.write().await.event_emitter = Some(emitter);

@@ -15,8 +15,8 @@
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::sync::{Arc, Mutex, RwLock};
 use std::fmt;
+use std::sync::{Arc, Mutex, RwLock};
 
 #[cfg(feature = "encryption")]
 use std::result::Result as StdResult;
@@ -447,66 +447,93 @@ impl Client {
             RoomEvent::RoomMember(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_member(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_member(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomName(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_name(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_name(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomCanonicalAlias(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_canonical_alias(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_canonical_alias(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomAliases(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_aliases(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_aliases(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomAvatar(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_avatar(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_avatar(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomMessage(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_message(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_message(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomMessageFeedback(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_message_feedback(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_message_feedback(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomRedaction(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_redaction(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_redaction(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             RoomEvent::RoomPowerLevels(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_room_power_levels(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_room_power_levels(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             _ => {}
         }
     }
@@ -516,49 +543,70 @@ impl Client {
             StateEvent::RoomMember(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_member(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_member(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             StateEvent::RoomName(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_name(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_name(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             StateEvent::RoomCanonicalAlias(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_canonical_alias(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_canonical_alias(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             StateEvent::RoomAliases(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_aliases(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_aliases(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             StateEvent::RoomAvatar(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_avatar(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_avatar(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             StateEvent::RoomPowerLevels(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_power_levels(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_power_levels(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             StateEvent::RoomJoinRules(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_state_join_rules(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_state_join_rules(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
             }
@@ -566,44 +614,67 @@ impl Client {
         }
     }
 
-    pub(crate) async fn emit_account_data_event(&mut self, room_id: &RoomId, event: &mut NonRoomEvent) {
+    pub(crate) async fn emit_account_data_event(
+        &mut self,
+        room_id: &RoomId,
+        event: &mut NonRoomEvent,
+    ) {
         match event {
             NonRoomEvent::Presence(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_account_presence(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_account_presence(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             NonRoomEvent::IgnoredUserList(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_account_ignored_users(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_account_ignored_users(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             NonRoomEvent::PushRules(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_account_push_rules(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_account_push_rules(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
+            }
             NonRoomEvent::FullyRead(_) => {
                 if let Some(ee) = &self.event_emitter {
                     if let Some(room) = self.get_room(&room_id.to_string()) {
-                        ee.lock().unwrap().on_account_data_fully_read(&room.read().unwrap(), event).await;
+                        ee.lock()
+                            .unwrap()
+                            .on_account_data_fully_read(&room.read().unwrap(), event)
+                            .await;
                     }
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
-    pub(crate) async fn emit_presence_event(&mut self, room_id: &RoomId, event: &mut PresenceEvent) {
+    pub(crate) async fn emit_presence_event(
+        &mut self,
+        room_id: &RoomId,
+        event: &mut PresenceEvent,
+    ) {
         if let Some(ee) = &self.event_emitter {
             if let Some(room) = self.get_room(&room_id.to_string()) {
-                ee.lock().unwrap().on_presence_event(&room.read().unwrap(), event).await;
+                ee.lock()
+                    .unwrap()
+                    .on_presence_event(&room.read().unwrap(), event)
+                    .await;
             }
         }
     }

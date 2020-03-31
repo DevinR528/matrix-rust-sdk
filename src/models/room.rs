@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use super::{RoomMember, UserId};
 
 use crate::events::collections::all::{RoomEvent, StateEvent};
+use crate::events::presence::PresenceEvent;
 use crate::events::room::{
     aliases::AliasesEvent,
     canonical_alias::CanonicalAliasEvent,
@@ -25,7 +26,6 @@ use crate::events::room::{
     name::NameEvent,
     power_levels::PowerLevelsEvent,
 };
-use crate::events::presence::PresenceEvent;
 use crate::identifiers::RoomAliasId;
 
 use js_int::UInt;
