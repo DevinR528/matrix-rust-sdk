@@ -37,7 +37,6 @@ pub use ruma_api as ruma_traits;
 mod async_client;
 mod base_client;
 mod error;
-mod event_emitter;
 mod models;
 mod session;
 
