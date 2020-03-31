@@ -13,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use futures::future::{BoxFuture, Future, FutureExt};
+use futures::future::Future;
 use std::convert::{TryFrom, TryInto};
 use std::result::Result as StdResult;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, RwLock as SyncLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::delay_for as sleep;
-use tracing::{debug, info, instrument, trace};
+use tracing::{info, instrument, trace};
 
 use http::Method as HttpMethod;
 use http::Response as HttpResponse;
@@ -29,9 +29,6 @@ use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use url::Url;
 
 use ruma_api::{Endpoint, Outgoing};
-use ruma_events::collections::all::{RoomEvent, StateEvent};
-use ruma_events::collections::only::Event as NonRoomEvent;
-use ruma_events::presence::PresenceEvent;
 use ruma_events::room::message::MessageEventContent;
 use ruma_events::EventResult;
 pub use ruma_events::EventType;
@@ -39,19 +36,9 @@ use ruma_identifiers::RoomId;
 
 use crate::api;
 use crate::base_client::Client as BaseClient;
-use crate::models::Room;
 use crate::session::Session;
 use crate::VERSION;
 use crate::{EventEmitter, Error, Result};
-
-type RoomEventCallback = Box<
-    dyn FnMut(Arc<SyncLock<Room>>, Arc<EventResult<RoomEvent>>) -> BoxFuture<'static, ()> + Send,
->;
-
-type PresenceEventCallback = Box<
-    dyn FnMut(Arc<SyncLock<Room>>, Arc<EventResult<PresenceEvent>>) -> BoxFuture<'static, ()>
-        + Send,
->;
 
 const DEFAULT_SYNC_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -66,9 +53,6 @@ pub struct AsyncClient {
     pub(crate) base_client: Arc<RwLock<BaseClient>>,
     /// The transaction id.
     transaction_id: Arc<AtomicU64>,
-    /// Any implementor of EventEmitter will act as the callbacks for various
-    /// events.
-    event_emitter: Option<Arc<Mutex<dyn EventEmitter>>>,
 }
 
 impl std::fmt::Debug for AsyncClient {
@@ -252,7 +236,6 @@ impl AsyncClient {
             http_client,
             base_client: Arc::new(RwLock::new(BaseClient::new(session)?)),
             transaction_id: Arc::new(AtomicU64::new(0)),
-            event_emitter: None,
         })
     }
 
@@ -271,8 +254,8 @@ impl AsyncClient {
     /// Add `EventEmitter` to `AsyncClient`.
     /// 
     /// The methods of `EventEmitter` are called when the respective `RoomEvents` occur.
-    pub fn add_event_emitter(&mut self, emitter: Arc<Mutex<dyn EventEmitter>>) {
-        self.event_emitter = Some(emitter);
+    pub async fn add_event_emitter(&mut self, emitter: Arc<Mutex<dyn EventEmitter>>) {
+        self.base_client.write().await.event_emitter = Some(emitter);
     }
 
     /// Calculates the room name from a `RoomId`, returning a string.
@@ -351,9 +334,9 @@ impl AsyncClient {
         for (room_id, room) in &mut response.rooms.join {
             let room_id_string = room_id.to_string();
 
-            let matrix_room = {
-                let mut client = self.base_client.write().await;
+            let mut client = self.base_client.write().await;
 
+            let _matrix_room = {
                 for event in &room.state.events {
                     if let EventResult::Ok(e) = event {
                         client.receive_joined_state_event(&room_id_string, &e);
@@ -367,13 +350,12 @@ impl AsyncClient {
             // re looping is not ideal here
             for event in &mut room.state.events {
                 if let EventResult::Ok(e) = event {
-                    self.emit_state_event(room_id, e).await;
+                    client.emit_state_event(room_id, e).await;
                 }
             }
 
             for mut event in &mut room.timeline.events {
                 let decrypted_event = {
-                    let mut client = self.base_client.write().await;
                     client
                         .receive_joined_timeline_event(room_id, &mut event)
                         .await
@@ -383,26 +365,22 @@ impl AsyncClient {
                     *event = e;
                 }
 
-                // TODO should we determine if anything room state has changed before calling
+                // TODO should we determine if any room state has changed before calling
                 if let EventResult::Ok(e) = event {
-                    self.emit_timeline_event(room_id, e).await;
+                    client.emit_timeline_event(room_id, e).await;
                 }
             }
 
             // look at AccountData to further cut down users by collecting ignored users
             for account_data in &mut room.account_data.events {
                 {
-                    let mut client = self.base_client.write().await;
                     if let EventResult::Ok(e) = account_data {
                         client.receive_account_data(&room_id_string, e);
+
+                        // TODO should we determine if anything room state has changed before calling
+                        client.emit_account_data_event(room_id, e).await;
                     }
                 }
-
-                // TODO should we determine if anything room state has changed before calling
-                if let EventResult::Ok(e) = account_data {
-                    self.emit_account_data_event(room_id, e).await;
-                }
-
             }
 
             // TODO `IncomingEphemeral` events for typing events
@@ -412,15 +390,12 @@ impl AsyncClient {
             // efficient but we need a room_id so we would loop through now or later.
             for presence in &mut response.presence.events {
                 {
-                    let mut client = self.base_client.write().await;
                     if let EventResult::Ok(e) = presence {
                         client.receive_presence_event(&room_id_string, e);
-                    }
-                }
 
-                // TODO should we determine if anything room state has changed before calling
-                if let EventResult::Ok(e) = presence {
-                    self.emit_presence_event(room_id, e).await;
+                        // TODO should we determine if any room state has changed before calling
+                        client.emit_presence_event(room_id, e).await;
+                    }
                 }
             }
         }
@@ -687,175 +662,5 @@ impl AsyncClient {
     /// This will be None if the client didn't sync at least once.
     pub async fn sync_token(&self) -> Option<String> {
         self.base_client.read().await.sync_token.clone()
-    }
-
-    async fn emit_timeline_event(&mut self, room_id: &RoomId, event: &mut RoomEvent) {
-        match event {
-            RoomEvent::RoomMember(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    // TODO should we have just a get so there is no accidental room creation
-                    // at this point?
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_member(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomName(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_name(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomCanonicalAlias(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_canonical_alias(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomAliases(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_aliases(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomAvatar(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_avatar(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomMessage(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_message(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomMessageFeedback(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_message_feedback(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomRedaction(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_redaction(&room.read().unwrap(), event).await;
-                }
-            },
-            RoomEvent::RoomPowerLevels(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_room_power_levels(&room.read().unwrap(), event).await;
-                }
-            },
-            _ => {}
-        }
-    }
-
-    async fn emit_state_event(&mut self, room_id: &RoomId, event: &mut StateEvent) {
-        match event {
-            StateEvent::RoomMember(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    // TODO should we have just a get so there is no accidental room creation
-                    // at this point?
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_member(&room.read().unwrap(), event).await;
-                }
-            },
-            StateEvent::RoomName(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_name(&room.read().unwrap(), event).await;
-                }
-            },
-            StateEvent::RoomCanonicalAlias(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_canonical_alias(&room.read().unwrap(), event).await;
-                }
-            },
-            StateEvent::RoomAliases(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_aliases(&room.read().unwrap(), event).await;
-                }
-            },
-            StateEvent::RoomAvatar(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_avatar(&room.read().unwrap(), event).await;
-                }
-            },
-            StateEvent::RoomPowerLevels(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_power_levels(&room.read().unwrap(), event).await;
-                }
-            },
-            StateEvent::RoomJoinRules(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_state_join_rules(&room.read().unwrap(), event).await;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    async fn emit_account_data_event(&mut self, room_id: &RoomId, event: &mut NonRoomEvent) {
-        match event {
-            NonRoomEvent::Presence(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_account_presence(&room.read().unwrap(), event).await;
-                }
-            },
-            NonRoomEvent::IgnoredUserList(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_account_ignored_users(&room.read().unwrap(), event).await;
-                }
-            },
-            NonRoomEvent::PushRules(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_account_push_rules(&room.read().unwrap(), event).await;
-                }
-            },
-            NonRoomEvent::FullyRead(_) => {
-                if let Some(ee) = &mut self.event_emitter {
-                    let mut client = self.base_client.write().await;
-                    let room = client.get_or_create_room(&room_id.to_string());
-                    ee.lock().unwrap().on_fully_read(&room.read().unwrap(), event).await;
-                }
-            },
-            _ => {},
-        }
-    }
-
-    async fn emit_presence_event(&mut self, room_id: &RoomId, event: &mut PresenceEvent) {
-        if let Some(ee) = &mut self.event_emitter {
-            let mut client = self.base_client.write().await;
-            let room = client.get_or_create_room(&room_id.to_string());
-            ee.lock().unwrap().on_presence_event(&room.read().unwrap(), event).await;
-        }
     }
 }

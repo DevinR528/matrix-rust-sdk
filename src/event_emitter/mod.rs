@@ -17,7 +17,6 @@ use crate::events::collections::all::{RoomEvent, StateEvent};
 use crate::events::collections::only::Event as NonRoomEvent;
 use crate::events::presence::PresenceEvent;
 use crate::models::Room;
-use crate::{Error, Result};
 ///
 #[async_trait::async_trait]
 pub trait EventEmitter: Send + Sync {
@@ -65,7 +64,7 @@ pub trait EventEmitter: Send + Sync {
     /// Fires when `AsyncClient` receives a `NonRoomEvent::RoomCanonicalAlias` event.
     async fn on_account_push_rules(&mut self, _: &Room, _: &NonRoomEvent) {}
     /// Fires when `AsyncClient` receives a `NonRoomEvent::RoomAliases` event.
-    async fn on_fully_read(&mut self, _: &Room, _: &NonRoomEvent) {}
+    async fn on_account_data_fully_read(&mut self, _: &Room, _: &NonRoomEvent) {}
 
     // `PresenceEvent` is a struct so there is only the one method
     /// Fires when `AsyncClient` receives a `NonRoomEvent::RoomAliases` event.

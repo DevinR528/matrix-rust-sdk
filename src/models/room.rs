@@ -14,9 +14,8 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 
-use super::{RoomMember, User, UserId};
+use super::{RoomMember, UserId};
 
 use crate::events::collections::all::{RoomEvent, StateEvent};
 use crate::events::room::{
@@ -26,12 +25,8 @@ use crate::events::room::{
     name::NameEvent,
     power_levels::PowerLevelsEvent,
 };
-use crate::events::{
-    presence::{PresenceEvent, PresenceEventContent},
-    EventResult,
-};
+use crate::events::presence::PresenceEvent;
 use crate::identifiers::RoomAliasId;
-use crate::session::Session;
 
 use js_int::UInt;
 
@@ -299,14 +294,11 @@ impl Room {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use crate::events::room::member::MembershipState;
     use crate::identifiers::UserId;
     use crate::{AsyncClient, Session, SyncSettings};
 
     use mockito::{mock, Matcher};
-    use tokio::runtime::Runtime;
     use url::Url;
 
     use std::convert::TryFrom;
@@ -345,7 +337,7 @@ mod test {
             .unwrap();
 
         assert_eq!(2, room.members.len());
-        for (id, member) in &room.members {
+        for (_id, member) in &room.members {
             assert_eq!(MembershipState::Join, member.membership);
         }
     }

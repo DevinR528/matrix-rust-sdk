@@ -41,13 +41,13 @@ async fn login(
     username: String,
     password: String,
 ) -> Result<(), matrix_sdk::Error> {
-    let client_config = AsyncClientConfig::new();
-        // .proxy("http://localhost:8080")?
-        // .disable_ssl_verification();
+    let client_config = AsyncClientConfig::new()
+        .proxy("http://localhost:8080")?
+        .disable_ssl_verification();
     let homeserver_url = Url::parse(&homeserver_url)?;
     let mut client = AsyncClient::new_with_config(homeserver_url, None, client_config).unwrap();
 
-    client.add_event_emitter(Arc::new(Mutex::new(EventCallback)));
+    client.add_event_emitter(Arc::new(Mutex::new(EventCallback))).await;
 
     client
         .login(username, password, None, Some("rust-sdk".to_string()))
