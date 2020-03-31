@@ -275,12 +275,6 @@ impl AsyncClient {
         self.event_emitter = Some(emitter);
     }
 
-    #[doc(hidden)]
-    /// Access to the underlying `BaseClient`. Used for testing and debugging so far.
-    pub(crate) fn base_client(&self) -> Arc<RwLock<BaseClient>> {
-        Arc::clone(&self.base_client)
-    }
-
     /// Calculates the room name from a `RoomId`, returning a string.
     pub async fn get_room_name(&self, room_id: &str) -> Option<String> {
         self.base_client.read().await.calculate_room_name(room_id)
