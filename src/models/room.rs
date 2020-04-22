@@ -28,6 +28,7 @@ use crate::events::room::{
     member::{MemberEvent, MembershipChange},
     name::NameEvent,
     power_levels::{NotificationPowerLevels, PowerLevelsEvent, PowerLevelsEventContent},
+    tombstone::TombstoneEvent,
 };
 use crate::events::EventType;
 use crate::identifiers::{RoomAliasId, RoomId, UserId};
@@ -82,8 +83,16 @@ pub struct PowerLevels {
     pub notifications: Int,
 }
 
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Tombstone {
+    /// A server-defined message.
+    body: String,
+    /// The room that is now active.
+    replacement: RoomId,
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-/// A Matrix rooom.
+/// A Matrix room.
 pub struct Room {
     /// The unique id of the room.
     pub room_id: RoomId,
@@ -106,6 +115,8 @@ pub struct Room {
     pub unread_highlight: Option<UInt>,
     /// Number of unread notifications.
     pub unread_notifications: Option<UInt>,
+    /// The tombstone state of this room.
+    pub tombstone: Option<Tombstone>,
 }
 
 impl RoomName {
@@ -128,26 +139,61 @@ impl RoomName {
         // https://matrix.org/docs/spec/client_server/latest#calculating-the-display-name-for-a-room.
         // the order in which we check for a name ^^
         if let Some(name) = &self.name {
-            name.clone()
+            let name = name.trim();
+            if name.is_empty() {
+                panic!("name");
+            }
+            name.to_string()
         } else if let Some(alias) = &self.canonical_alias {
-            alias.alias().to_string()
-        } else if !self.aliases.is_empty() {
-            self.aliases[0].alias().to_string()
+            let alias = alias.alias().trim();
+            if alias.is_empty() {
+                panic!("alias");
+            }
+            alias.to_string()
+        } else if !self.aliases.is_empty() && !self.aliases[0].alias().is_empty() {
+            if self.aliases[0].alias().trim().is_empty() {
+                panic!("alias");
+            }
+            self.aliases[0].alias().trim().to_string()
         } else {
-            let joined = self.joined_member_count.unwrap_or(UInt::max_value());
-            let invited = self.invited_member_count.unwrap_or(UInt::max_value());
+            let joined = self.joined_member_count.unwrap_or(UInt::min_value());
+            let invited = self.invited_member_count.unwrap_or(UInt::min_value());
             let heroes = UInt::new(self.heroes.len() as u64).unwrap();
             let one = UInt::new(1).unwrap();
 
-            if heroes >= (joined + invited - one) {
-                let mut names = self.heroes.iter().take(3).cloned().collect::<Vec<String>>();
+            let invited_joined = if invited + joined == UInt::min_value() {
+                UInt::min_value()
+            } else {
+                invited + joined - one
+            };
+
+            if heroes >= invited_joined {
+                let mut names = self
+                    .heroes
+                    .iter()
+                    .take(3)
+                    .map(|s| s.trim().to_string())
+                    .collect::<Vec<String>>();
                 names.sort();
                 names.join(", ")
-            } else if heroes < (joined + invited - one) && invited + joined > one {
-                let mut names = self.heroes.iter().take(3).cloned().collect::<Vec<String>>();
+            } else if heroes < invited_joined && invited + joined > one {
+                let mut names = self
+                    .heroes
+                    .iter()
+                    .take(3)
+                    .map(|s| s.trim().to_string())
+                    .collect::<Vec<String>>();
                 names.sort();
                 // TODO what is the length the spec wants us to use here and in the `else`
-                format!("{}, and {} others", names.join(", "), (joined + invited))
+                format!(
+                    "{}, and {} others",
+                    names
+                        .iter()
+                        .map(|s| s.trim().to_string())
+                        .collect::<Vec<String>>()
+                        .join(", "),
+                    (joined + invited)
+                )
             } else {
                 format!("Empty Room (was {} others)", members.len())
             }
@@ -175,6 +221,7 @@ impl Room {
             encrypted: false,
             unread_highlight: None,
             unread_notifications: None,
+            tombstone: None,
         }
     }
 
@@ -335,6 +382,14 @@ impl Room {
         updated
     }
 
+    fn handle_tombstone(&mut self, event: &TombstoneEvent) -> bool {
+        self.tombstone = Some(Tombstone {
+            body: event.content.body.clone(),
+            replacement: event.content.replacement_room.clone(),
+        });
+        true
+    }
+
     fn handle_encryption_event(&mut self, _event: &EncryptionEvent) -> bool {
         self.encrypted = true;
         true
@@ -357,6 +412,7 @@ impl Room {
             RoomEvent::RoomAliases(a) => self.handle_room_aliases(a),
             // power levels of the room members
             RoomEvent::RoomPowerLevels(p) => self.handle_power_level(p),
+            RoomEvent::RoomTombstone(t) => self.handle_tombstone(t),
             RoomEvent::RoomEncryption(e) => self.handle_encryption_event(e),
             _ => false,
         }

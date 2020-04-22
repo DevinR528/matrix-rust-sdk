@@ -671,6 +671,13 @@ impl Client {
                     }
                 }
             }
+            RoomEvent::RoomTombstone(tomb) => {
+                if let Some(ee) = &self.event_emitter {
+                    if let Some(room) = self.get_room(&room_id) {
+                        ee.on_room_tombstone(Arc::clone(&room), &tomb).await;
+                    }
+                }
+            }
             _ => {}
         }
     }
