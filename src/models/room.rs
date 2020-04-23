@@ -140,20 +140,11 @@ impl RoomName {
         // the order in which we check for a name ^^
         if let Some(name) = &self.name {
             let name = name.trim();
-            if name.is_empty() {
-                panic!("name");
-            }
             name.to_string()
         } else if let Some(alias) = &self.canonical_alias {
             let alias = alias.alias().trim();
-            if alias.is_empty() {
-                panic!("alias");
-            }
             alias.to_string()
         } else if !self.aliases.is_empty() && !self.aliases[0].alias().is_empty() {
-            if self.aliases[0].alias().trim().is_empty() {
-                panic!("alias");
-            }
             self.aliases[0].alias().trim().to_string()
         } else {
             let joined = self.joined_member_count.unwrap_or(UInt::min_value());
@@ -167,33 +158,24 @@ impl RoomName {
                 invited + joined - one
             };
 
+            // TODO this should use `self.heroes but it is always empty??
             if heroes >= invited_joined {
-                let mut names = self
-                    .heroes
-                    .iter()
+                let mut names = members
+                    .values()
                     .take(3)
-                    .map(|s| s.trim().to_string())
+                    .map(|mem| mem.user_id.localpart().to_string())
                     .collect::<Vec<String>>();
                 names.sort();
                 names.join(", ")
             } else if heroes < invited_joined && invited + joined > one {
-                let mut names = self
-                    .heroes
-                    .iter()
+                let mut names = members
+                    .values()
                     .take(3)
-                    .map(|s| s.trim().to_string())
+                    .map(|mem| mem.user_id.localpart().to_string())
                     .collect::<Vec<String>>();
                 names.sort();
                 // TODO what is the length the spec wants us to use here and in the `else`
-                format!(
-                    "{}, and {} others",
-                    names
-                        .iter()
-                        .map(|s| s.trim().to_string())
-                        .collect::<Vec<String>>()
-                        .join(", "),
-                    (joined + invited)
-                )
+                format!("{}, and {} others", names.join(", "), (joined + invited))
             } else {
                 format!("Empty Room (was {} others)", members.len())
             }
@@ -432,6 +414,7 @@ impl Room {
             StateEvent::RoomCanonicalAlias(ca) => self.handle_canonical(ca),
             StateEvent::RoomAliases(a) => self.handle_room_aliases(a),
             StateEvent::RoomPowerLevels(p) => self.handle_power_level(p),
+            StateEvent::RoomTombstone(t) => self.handle_tombstone(t),
             StateEvent::RoomEncryption(e) => self.handle_encryption_event(e),
             _ => false,
         }
