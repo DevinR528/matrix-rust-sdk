@@ -31,6 +31,7 @@ use crate::events::{
         redaction::RedactionEvent,
         tombstone::TombstoneEvent,
     },
+    typing::TypingEvent,
 };
 use crate::models::Room;
 use tokio::sync::RwLock;
@@ -127,6 +128,8 @@ pub trait EventEmitter: Send + Sync {
     async fn on_account_push_rules(&self, _: Arc<RwLock<Room>>, _: &PushRulesEvent) {}
     /// Fires when `AsyncClient` receives a `NonRoomEvent::RoomAliases` event.
     async fn on_account_data_fully_read(&self, _: Arc<RwLock<Room>>, _: &FullyReadEvent) {}
+    /// Fires when `AsyncClient` receives a `NonRoomEvent::Typing` event.
+    async fn on_account_data_typing(&self, _: Arc<RwLock<Room>>, _: &TypingEvent) {}
 
     // `PresenceEvent` is a struct so there is only the one method
     /// Fires when `AsyncClient` receives a `NonRoomEvent::RoomAliases` event.

@@ -806,6 +806,13 @@ impl Client {
                     }
                 }
             }
+            NonRoomEvent::Typing(typing) => {
+                if let Some(ee) = &self.event_emitter {
+                    if let Some(room) = self.get_room(&room_id) {
+                        ee.on_account_data_typing(Arc::clone(&room), &typing).await;
+                    }
+                }
+            }
             _ => {}
         }
     }
