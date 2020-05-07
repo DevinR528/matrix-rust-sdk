@@ -165,7 +165,7 @@ impl EventBuilder {
         self
     }
 
-    /// Consumes `ResponseBuilder and returns a `TestRunner`.
+    /// Consumes `ResponseBuilder` and returns a `TestRunner`.
     ///
     /// The `TestRunner` responds to requests made by the `AsyncClient`.
     pub fn build_with_response<M, P>(mut self, path: P, method: &str, matcher: M) -> MockTestRunner
@@ -192,7 +192,7 @@ impl EventBuilder {
         }
     }
 
-    /// Consumes `ResponseBuilder and returns a `TestRunner`.
+    /// Consumes `ResponseBuilder` and returns a `TestRunner`.
     ///
     /// The `TestRunner` streams the events to the client and holds methods to make assertions
     /// about the state of the client.
@@ -257,7 +257,7 @@ impl EventBuilder {
         }
     }
 
-    /// Consumes `ResponseBuilder and returns a `TestRunner`.
+    /// Consumes `ResponseBuilder` and returns a `TestRunner`.
     ///
     /// The `TestRunner` streams the events to the `AsyncClient` and holds methods to make assertions
     /// about the state of the `AsyncClient`.

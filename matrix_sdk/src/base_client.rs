@@ -616,6 +616,9 @@ impl Client {
             }
         }
 
+        // TODO when a joined/invited room receives a leave event we need to move the room??
+        // this would apply for any transition also.
+
         // when events change state, updated signals to StateStore to update database
         let mut updated = self.iter_joined_rooms(response).await?;
 
@@ -661,6 +664,12 @@ impl Client {
                 .write()
                 .await
                 .set_room_summary(&joined_room.summary);
+
+            // set unread notification count
+            matrix_room
+                .write()
+                .await
+                .set_unread_notice_count(&joined_room.unread_notifications);
 
             // re looping is not ideal here
             for event in &mut joined_room.state.events {
