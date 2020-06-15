@@ -248,6 +248,8 @@ impl SyncSettings {
 }
 
 use api::r0::account::register;
+use api::r0::directory::get_public_rooms;
+use api::r0::directory::get_public_rooms_filtered;
 #[cfg(feature = "encryption")]
 use api::r0::keys::{claim_keys, get_keys, upload_keys, KeyAlgorithm};
 use api::r0::membership::{
@@ -643,6 +645,42 @@ impl Client {
             room_id: room_id.clone(),
             recipient: InvitationRecipient::ThirdPartyId(invite_id.clone()),
         };
+        self.send(request).await
+    }
+
+    /// Search the homeserver's directory of public rooms.
+    ///
+    /// Returns a `invite_user::Response`, an empty response.
+    ///
+    /// # Arguments
+    ///
+    /// * `room_search` - The easiest way to create this request is using the `RoomSearchBuilder`.
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use matrix_sdk::{Client, RoomSearchBuilder};
+    /// # use matrix_sdk::api::r0::directory::get_public_rooms_filtered::Filter;
+    /// # use url::Url;
+    /// # let homeserver = Url::parse("http://example.com").unwrap();
+    ///
+    /// let generic_search_term = "matrix-rust-sdk";
+    /// let mut builder = RoomSearchBuilder::new();
+    /// builder.room_id(room_id)
+    ///     .filter(Filter { generic_search_term, })
+    ///     .since(last_sync_token)
+    ///     .room_network(RoomNetwork::Matrix);
+    ///
+    /// let mut cli = Client::new(homeserver).unwrap();
+    /// # use futures::executor::block_on;
+    /// # block_on(async {
+    /// assert!(cli.get_public_rooms_filtered(builder).await.is_ok());
+    /// # });
+    /// ```
+    pub async fn get_public_rooms_filtered<R: Into<get_public_rooms_filtered::Request>>(
+        &self,
+        room_search: R,
+    ) -> Result<get_public_rooms_filtered::Response> {
+        let request = room_search.into();
         self.send(request).await
     }
 
