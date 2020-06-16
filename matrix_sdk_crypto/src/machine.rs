@@ -214,8 +214,8 @@ impl OlmMachine {
         // max_one_time_Keys() / 2, otherwise tell the client to upload more.
         match &self.uploaded_signed_key_count {
             Some(count) => {
-                let max_keys = self.account.max_one_time_keys().await as u64;
-                let key_count = (max_keys / 2) - count.load(Ordering::Relaxed);
+                let max_keys = self.account.max_one_time_keys().await as i64;
+                let key_count = (max_keys / 2) - count.load(Ordering::Relaxed) as i64;
                 key_count > 0
             }
             None => false,

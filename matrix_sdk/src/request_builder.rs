@@ -422,7 +422,7 @@ impl Into<register::Request> for RegistrationBuilder {
 ///
 /// let generic_search_term = "matrix-rust-sdk";
 /// let mut builder = RoomSearchBuilder::new();
-/// builder.room_id(room_id)
+/// builder
 ///     .filter(Filter { generic_search_term, })
 ///     .since(last_sync_token)
 ///     .room_network(RoomNetwork::Matrix);
