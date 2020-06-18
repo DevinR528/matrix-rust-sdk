@@ -17,13 +17,6 @@
                     "events": [
                         {
                             "content": {
-                                "event_id": "$someplace:example.org"
-                            },
-                            "room_id": "!roomid:room.com",
-                            "type": "m.fully_read"
-                        },
-                        {
-                            "content": {
                                 "ignored_users": {
                                     "@someone:example.org": {}
                                 }
@@ -44,7 +37,15 @@
                                     }
                                 }
                             },
+                            "room_id": "!SVkFJHzfwvuaIEawgC:localhost",
                             "type": "m.receipt"
+                        },
+                        {
+                            "content": {
+                                "event_id": "$someplace:example.org"
+                            },
+                            "room_id": "!SVkFJHzfwvuaIEawgC:localhost",
+                            "type": "m.fully_read"
                         }
                     ]
                 },
@@ -70,7 +71,6 @@
                                 "membership": "join"
                             },
                             "event_id": "$151800140517rfvjc:localhost",
-                            "membership": "join",
                             "origin_server_ts": 1518001405556,
                             "sender": "@example:localhost",
                             "state_key": "@example:localhost",
@@ -188,26 +188,21 @@
                                 "membership": "join"
                             },
                             "event_id": "$152034824468gOeNB:localhost",
-                            "membership": "join",
                             "origin_server_ts": 1520348244605,
                             "sender": "@example2:localhost",
                             "state_key": "@example2:localhost",
                             "type": "m.room.member",
                             "unsigned": {
                                 "age": 623527289,
-                                "prev_content": {
-                                    "membership": "leave"
-                                },
-                                "prev_sender": "@example:localhost",
                                 "replaces_state": "$152034819067QWJxM:localhost"
                             }
                         },
                         {
                             "content": {
-                              "membership": "leave",
-                              "reason": "offline",
-                              "avatar_url": "avatar.com",
-                              "displayname": "example"
+                                "membership": "leave",
+                                "reason": "offline",
+                                "avatar_url": "avatar.com",
+                                "displayname": "example"
                             },
                             "event_id": "$1585345508297748AIUBh:matrix.org",
                             "origin_server_ts": 1585345508223,
@@ -215,17 +210,10 @@
                             "state_key": "@example:localhost",
                             "type": "m.room.member",
                             "unsigned": {
-                              "replaces_state": "$1585345354296486IGZfp:localhost",
-                              "prev_content": {
-                                "avatar_url": "avatar.com",
-                                "displayname": "example",
-                                "membership": "join"
-                              },
-                              "prev_sender": "@example2:localhost",
-                              "age": 6992
-                            },
-                            "room_id": "!roomid:room.com"
-                          }
+                                "replaces_state": "$1585345354296486IGZfp:localhost",
+                                "age": 6992
+                            }
+                        }
                     ]
                 },
                 "timeline": {

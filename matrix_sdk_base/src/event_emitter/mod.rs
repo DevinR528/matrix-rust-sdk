@@ -420,7 +420,7 @@ mod test {
         }
 
         async fn on_non_room_presence(&self, _: SyncRoom, _: &PresenceEvent) {
-            self.0.lock().await.push("account presence".to_string())
+            self.0.lock().await.push("presence".to_string())
         }
         async fn on_non_room_ignored_users(
             &self,
@@ -456,7 +456,8 @@ mod test {
         async fn on_presence_event(&self, _: SyncRoom, _: &PresenceEvent) {
             self.0.lock().await.push("presence event".to_string())
         }
-        async fn on_unrecognized_event(&self, _: SyncRoom, _: &CustomOrRawEvent<'_>) {
+        async fn on_unrecognized_event(&self, _: SyncRoom, event: &CustomOrRawEvent<'_>) {
+            println!("{:#?}", event);
             self.0.lock().await.push("unrecognized event".to_string())
         }
     }
@@ -574,6 +575,7 @@ mod test {
                 "message",
                 "unrecognized event",
                 "redaction",
+                "unrecognized event",
                 "unrecognized event",
                 "receipt event",
                 "typing event"

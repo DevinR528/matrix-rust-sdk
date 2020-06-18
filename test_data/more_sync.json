@@ -27,6 +27,7 @@
                                     }
                                 }
                             },
+                            "room_id": "!jEsUZKDJdhlrceRyVU:example.org",
                             "type": "m.receipt"
                         },
                         {

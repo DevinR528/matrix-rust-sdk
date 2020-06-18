@@ -1579,6 +1579,22 @@ impl BaseClient {
                         )
                         .await
                 }
+                AnyStateEventContent::RoomJoinRules(_) => {
+                    // TODO is this needed ??
+
+                    // event_emitter
+                    //     .on_room_join_rules(
+                    //         room,
+                    //         &event.clone().map_content(|c| {
+                    //             if let AnyStateEventContent::RoomJoinRules(content) = c {
+                    //                 content
+                    //             } else {
+                    //                 panic!("incompatible event content found for join_rules event")
+                    //             }
+                    //         }),
+                    //     )
+                    //     .await
+                }
                 AnyStateEventContent::Custom(_) => {
                     event_emitter
                         .on_unrecognized_event(
@@ -1767,6 +1783,20 @@ impl BaseClient {
                                 content
                             } else {
                                 panic!("incompatible event content found for power_levels event")
+                            }
+                        }),
+                    )
+                    .await
+            }
+            AnyStateEventContent::RoomJoinRules(_) => {
+                event_emitter
+                    .on_state_join_rules(
+                        room,
+                        &event.clone().map_content(|c| {
+                            if let AnyStateEventContent::RoomJoinRules(content) = c {
+                                content
+                            } else {
+                                panic!("incompatible event content found for join_rules event")
                             }
                         }),
                     )

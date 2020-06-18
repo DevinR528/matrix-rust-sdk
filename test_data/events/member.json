@@ -5,7 +5,6 @@
         "membership": "join"
     },
     "event_id": "$151800140517rfvjc:localhost",
-    "membership": "join",
     "origin_server_ts": 1518001405556,
     "sender": "@example:localhost",
     "state_key": "@example:localhost",
