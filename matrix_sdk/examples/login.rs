@@ -3,7 +3,10 @@ use url::Url;
 
 use matrix_sdk::{
     self,
-    events::room::message::{MessageEvent, MessageEventContent, TextMessageEventContent},
+    events::{
+        room::message::{MessageEventContent, TextMessageEventContent},
+        MessageEventStub,
+    },
     Client, ClientConfig, EventEmitter, SyncRoom, SyncSettings,
 };
 
@@ -11,9 +14,9 @@ struct EventCallback;
 
 #[async_trait::async_trait]
 impl EventEmitter for EventCallback {
-    async fn on_room_message(&self, room: SyncRoom, event: &MessageEvent) {
+    async fn on_room_message(&self, room: SyncRoom, event: &MessageEventStub<MessageEventContent>) {
         if let SyncRoom::Joined(room) = room {
-            if let MessageEvent {
+            if let MessageEventStub {
                 content: MessageEventContent::Text(TextMessageEventContent { body: msg_body, .. }),
                 sender,
                 ..
@@ -28,7 +31,7 @@ impl EventEmitter for EventCallback {
                         .display_name
                         .as_ref()
                         .map(ToString::to_string)
-                        .unwrap_or(sender.to_string())
+                        .unwrap_or_else(|| sender.to_string())
                 };
                 println!("{}: {}", name, msg_body);
             }

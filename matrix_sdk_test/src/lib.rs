@@ -89,25 +89,6 @@ impl EventBuilder {
         self
     }
 
-    // /// Add an event to the room events `Vec`.
-    // pub fn add_room_event<Ev: serde::de::DeserializeOwned>(
-    //     mut self,
-    //     file: EventsFile,
-    //     variant: fn(Ev) -> AnyRoomEventStub,
-    // ) -> Self {
-    //     let val = match file {
-    //         EventsFile::MessageText => include_str!("../../test_data/events/message_text.json"),
-    //         _ => panic!("unknown room event file {:?}", file),
-    //     };
-
-    //     let event = serde_json::from_str::<Ev>(&val).unwrap();
-    //     self.add_joined_event(
-    //         &RoomId::try_from("!SVkFJHzfwvuaIEawgC:localhost").unwrap(),
-    //         variant(event),
-    //     );
-    //     self
-    // }
-
     pub fn add_custom_joined_event<Ev: serde::de::DeserializeOwned>(
         mut self,
         room_id: &RoomId,

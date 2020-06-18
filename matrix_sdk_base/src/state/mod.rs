@@ -23,8 +23,8 @@ mod json_store;
 pub use json_store::JsonStore;
 
 use crate::client::{BaseClient, Token};
-use crate::events::push_rules::Ruleset;
 use crate::identifiers::{RoomId, UserId};
+use crate::push::Ruleset;
 use crate::{Result, Room, RoomState, Session};
 
 /// `ClientState` holds all the information to restore a `BaseClient`

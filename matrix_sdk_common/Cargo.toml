@@ -17,7 +17,7 @@ js_int = "0.1.5"
 # ruma-events = "0.21.2"
 # ruma-identifiers = "0.16.1"
 
-ruma = { git = "https://github.com/DevinR528/ruma", features = ["client-api", "rand"], branch = "map-content" }
+ruma = { git = "https://github.com/DevinR528/ruma", features = ["client-api", "rand"], branch = "matrix-sdk2" }
 # ruma = { path = "../../ruma/ruma", features = ["client-api", "rand"] }
 
 instant = { version = "0.1.4", features = ["wasm-bindgen", "now"] }

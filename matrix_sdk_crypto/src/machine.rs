@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use std::mem;
 #[cfg(feature = "sqlite-cryptostore")]
 use std::path::Path;
@@ -934,30 +934,11 @@ impl OlmMachine {
             .get(&KeyAlgorithm::Ed25519)
             .ok_or(EventError::MissingSigningKey)?;
 
-        let ev_type = decrypted_json
-            .get("type")
-            .cloned()
-            .ok_or_else(|| EventError::MissingField("type".to_string()))?;
-
-        let content = decrypted_json
-            .get("content")
-            .cloned()
-            .ok_or_else(|| EventError::MissingField("content".to_string()))?;
-
-        let sender = decrypted_json
-            .get("sender")
-            .cloned()
-            .ok_or_else(|| EventError::MissingField("sender".to_string()))?;
-
-        let device_event = json!({
-            "type": ev_type,
-            "content": content,
-            "sender": sender
-        });
-
-        let event = serde_json::from_value::<EventJson<AnyToDeviceEvent>>(device_event)?;
-
-        Ok((event, signing_key.to_owned()))
+        Ok((
+            // FIXME EventJson<Any*Event> fails to deserialize still?
+            EventJson::from(serde_json::from_value::<AnyToDeviceEvent>(decrypted_json)?),
+            signing_key.to_owned(),
+        ))
     }
 
     /// Decrypt a to-device event.

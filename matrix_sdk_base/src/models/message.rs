@@ -7,11 +7,12 @@ use std::cmp::Ordering;
 use std::ops::Deref;
 use std::vec::IntoIter;
 
-use crate::events::room::message::MessageEvent;
-use crate::events::EventJson;
+use crate::events::room::message::MessageEventContent;
+use crate::events::MessageEventStub;
 
 use serde::{de, ser, Serialize};
 
+type MessageEvent = MessageEventStub<MessageEventContent>;
 /// A queue that holds the 10 most recent messages received from the server.
 #[derive(Clone, Debug, Default)]
 pub struct MessageQueue {
@@ -115,13 +116,10 @@ pub(crate) mod ser_deser {
     where
         D: de::Deserializer<'de>,
     {
-        use serde::de::Error;
-
-        let messages: Vec<EventJson<MessageEvent>> = de::Deserialize::deserialize(deserializer)?;
+        let messages: Vec<MessageEvent> = de::Deserialize::deserialize(deserializer)?;
 
         let mut msgs = vec![];
-        for json in messages {
-            let msg = json.deserialize().map_err(D::Error::custom)?;
+        for msg in messages {
             msgs.push(MessageWrapper(msg));
         }
 
@@ -146,7 +144,6 @@ mod test {
     #[cfg(target_arch = "wasm32")]
     use wasm_bindgen_test::*;
 
-    use crate::events::{collections::all::RoomEvent, EventJson};
     use crate::identifiers::{RoomId, UserId};
     use crate::Room;
 
@@ -158,17 +155,11 @@ mod test {
         let mut room = Room::new(&id, &user);
 
         let json = std::fs::read_to_string("../test_data/events/message_text.json").unwrap();
-        let event = serde_json::from_str::<EventJson<RoomEvent>>(&json).unwrap();
+        let msg = serde_json::from_str::<MessageEvent>(&json).unwrap();
 
         let mut msgs = MessageQueue::new();
-        let message = if let RoomEvent::RoomMessage(msg) = event.deserialize().unwrap() {
-            msgs.push(msg.clone());
-            msg
-        } else {
-            panic!("this should always be a RoomMessage")
-        };
-        room.messages = msgs.clone();
-
+        msgs.push(msg.clone());
+        room.messages = msgs;
         let mut joined_rooms = HashMap::new();
         joined_rooms.insert(id, room);
 
@@ -187,7 +178,7 @@ mod test {
                     "own_user_id": "@example:example.com",
                     "creator": null,
                     "members": {},
-                    "messages": [ message ],
+                    "messages": [ msg ],
                     "typing_users": [],
                     "power_levels": null,
                     "encrypted": null,
@@ -208,19 +199,14 @@ mod test {
         let mut room = Room::new(&id, &user);
 
         let json = std::fs::read_to_string("../test_data/events/message_text.json").unwrap();
-        let event = serde_json::from_str::<EventJson<RoomEvent>>(&json).unwrap();
+        let msg = serde_json::from_str::<MessageEvent>(&json).unwrap();
 
         let mut msgs = MessageQueue::new();
-        let message = if let RoomEvent::RoomMessage(msg) = event.deserialize().unwrap() {
-            msgs.push(msg.clone());
-            msg
-        } else {
-            panic!("this should always be a RoomMessage")
-        };
+        msgs.push(msg.clone());
         room.messages = msgs;
 
         let mut joined_rooms = HashMap::new();
-        joined_rooms.insert(id, room.clone());
+        joined_rooms.insert(id, room);
 
         let json = serde_json::json!({
             "!roomid:example.com": {
@@ -236,7 +222,7 @@ mod test {
                 "own_user_id": "@example:example.com",
                 "creator": null,
                 "members": {},
-                "messages": [ message ],
+                "messages": [ msg ],
                 "typing_users": [],
                 "power_levels": null,
                 "encrypted": null,

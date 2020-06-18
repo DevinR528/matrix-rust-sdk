@@ -205,6 +205,7 @@ mod test {
 
     use crate::api::r0::sync::sync_events::Response as SyncResponse;
     use crate::identifiers::{RoomId, UserId};
+    use crate::push::Ruleset;
     use crate::{BaseClient, BaseClientConfig, Session};
 
     fn sync_response(file: &str) -> SyncResponse {
@@ -231,7 +232,7 @@ mod test {
         let state = ClientState {
             sync_token: Some("hello".into()),
             ignored_users: vec![user],
-            push_ruleset: None,
+            push_ruleset: None::<Ruleset>,
         };
 
         let mut path_with_user = PathBuf::from(path);

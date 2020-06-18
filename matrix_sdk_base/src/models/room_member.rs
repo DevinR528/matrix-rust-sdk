@@ -15,13 +15,13 @@
 
 use std::convert::TryFrom;
 
-use crate::events::collections::all::Event;
 use crate::events::presence::{PresenceEvent, PresenceEventContent, PresenceState};
 use crate::events::room::{
-    member::{MemberEvent, MembershipChange, MembershipState},
-    power_levels::PowerLevelsEvent,
+    member::{MemberEventContent, MembershipChange, MembershipState},
+    power_levels::PowerLevelsEventContent,
 };
-use crate::identifiers::UserId;
+use crate::events::StateEventStub;
+use crate::identifiers::{RoomId, UserId};
 
 use crate::js_int::{Int, UInt};
 use serde::{Deserialize, Serialize};
@@ -43,7 +43,7 @@ pub struct RoomMember {
     /// If the user should be considered active.
     pub currently_active: Option<bool>,
     /// The unique id of the room.
-    pub room_id: Option<String>,
+    pub room_id: Option<RoomId>,
     /// If the member is typing.
     pub typing: Option<bool>,
     /// The presence of the user, if found.
@@ -58,11 +58,7 @@ pub struct RoomMember {
     pub membership: MembershipState,
     /// The human readable name of this room member.
     pub name: String,
-    /// The events that created the state of this room member.
-    #[serde(deserialize_with = "super::event_deser::deserialize_events")]
-    pub events: Vec<Event>,
     /// The `PresenceEvent`s connected to this user.
-    #[serde(deserialize_with = "super::event_deser::deserialize_presence")]
     pub presence_events: Vec<PresenceEvent>,
 }
 
@@ -80,10 +76,10 @@ impl PartialEq for RoomMember {
 }
 
 impl RoomMember {
-    pub fn new(event: &MemberEvent) -> Self {
+    pub fn new(event: &StateEventStub<MemberEventContent>, room_id: &RoomId) -> Self {
         Self {
             name: event.state_key.clone(),
-            room_id: event.room_id.as_ref().map(|id| id.to_string()),
+            room_id: Some(room_id.clone()),
             user_id: UserId::try_from(event.state_key.as_str()).unwrap(),
             display_name: event.content.displayname.clone(),
             avatar_url: event.content.avatar_url.clone(),
@@ -95,16 +91,15 @@ impl RoomMember {
             power_level: None,
             power_level_norm: None,
             membership: event.content.membership,
-            presence_events: Vec::default(),
-            events: vec![Event::RoomMember(event.clone())],
+            presence_events: vec![],
         }
     }
 
-    pub fn update_member(&mut self, event: &MemberEvent) -> bool {
+    pub fn update_member(&mut self, event: &StateEventStub<MemberEventContent>) -> bool {
         use MembershipChange::*;
 
         match event.membership_change() {
-            ProfileChanged => {
+            ProfileChanged { .. } => {
                 self.display_name = event.content.displayname.clone();
                 self.avatar_url = event.content.avatar_url.clone();
                 true
@@ -118,10 +113,15 @@ impl RoomMember {
             None => false,
             // we ignore the error here as only a buggy or malicious server would send this
             Error => false,
+            _ => false,
         }
     }
 
-    pub fn update_power(&mut self, event: &PowerLevelsEvent, max_power: Int) -> bool {
+    pub fn update_power(
+        &mut self,
+        event: &StateEventStub<PowerLevelsEventContent>,
+        max_power: Int,
+    ) -> bool {
         let changed;
         if let Some(user_power) = event.content.users.get(&self.user_id) {
             changed = self.power_level != Some(*user_power);
@@ -201,7 +201,6 @@ impl RoomMember {
 mod test {
     use matrix_sdk_test::{async_test, EventBuilder, EventsFile};
 
-    use crate::events::collections::all::RoomEvent;
     use crate::events::room::member::MembershipState;
     use crate::identifiers::{RoomId, UserId};
     use crate::{BaseClient, Session};
@@ -235,8 +234,8 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_room_event(EventsFile::Member, RoomEvent::RoomMember)
-            .add_room_event(EventsFile::PowerLevels, RoomEvent::RoomPowerLevels)
+            .add_state_event(EventsFile::Member)
+            .add_state_event(EventsFile::PowerLevels)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();
@@ -259,8 +258,8 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_room_event(EventsFile::Member, RoomEvent::RoomMember)
-            .add_room_event(EventsFile::PowerLevels, RoomEvent::RoomPowerLevels)
+            .add_state_event(EventsFile::Member)
+            .add_state_event(EventsFile::PowerLevels)
             .add_presence_event(EventsFile::Presence)
             .build_sync_response();
 
