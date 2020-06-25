@@ -117,7 +117,8 @@ impl RoomMember {
         use MembershipChange::*;
 
         match event.membership_change() {
-            ProfileChanged => {
+            // we assume that the profile has changed
+            ProfileChanged { .. } => {
                 self.display_name = event.content.displayname.clone();
                 self.avatar_url = event.content.avatar_url.clone();
                 true
@@ -212,7 +213,6 @@ impl RoomMember {
 mod test {
     use matrix_sdk_test::{async_test, EventBuilder, EventsJson};
 
-    use crate::events::room::member::MembershipState;
     use crate::identifiers::{RoomId, UserId};
     use crate::{BaseClient, Session};
 
@@ -245,8 +245,8 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Member)
-            .add_state_event(EventsFile::PowerLevels)
+            .add_state_event(EventsJson::Member)
+            .add_state_event(EventsJson::PowerLevels)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();
@@ -268,9 +268,9 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Member)
-            .add_state_event(EventsFile::PowerLevels)
-            .add_presence_event(EventsFile::Presence)
+            .add_state_event(EventsJson::Member)
+            .add_state_event(EventsJson::PowerLevels)
+            .add_presence_event(EventsJson::Presence)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();

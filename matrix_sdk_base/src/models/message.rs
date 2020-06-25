@@ -156,7 +156,6 @@ mod test {
 
     use matrix_sdk_test::test_json;
 
-    use crate::events::{collections::all::RoomEvent, EventJson};
     use crate::identifiers::{RoomId, UserId};
     use crate::Room;
 

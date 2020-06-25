@@ -1493,7 +1493,6 @@ mod test {
         set_read_marker, Invite3pid, MessageEventContent,
     };
     use super::{Client, ClientConfig, Session, SyncSettings, Url};
-    use crate::events::room::member::MembershipState;
     use crate::events::room::message::TextMessageEventContent;
 
     use crate::identifiers::{EventId, RoomId, RoomIdOrAliasId, UserId};
@@ -1618,8 +1617,8 @@ mod test {
         client.restore_login(session).await.unwrap();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Member)
-            .add_state_event(EventsFile::PowerLevels)
+            .add_state_event(EventsJson::Member)
+            .add_state_event(EventsJson::PowerLevels)
             .build_sync_response();
 
         client

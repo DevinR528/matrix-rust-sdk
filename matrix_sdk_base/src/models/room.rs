@@ -50,8 +50,7 @@ use crate::identifiers::{RoomAliasId, RoomId, UserId};
 use crate::js_int::{Int, UInt};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Clone))]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 /// `RoomName` allows the calculation of a text room name.
 pub struct RoomName {
     /// The displayed name of the room.
@@ -73,7 +72,7 @@ pub struct RoomName {
     pub invited_member_count: Option<UInt>,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PowerLevels {
     /// The level required to ban a user.
     pub ban: Int,
@@ -99,7 +98,7 @@ pub struct PowerLevels {
     pub notifications: Int,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 /// Encryption info of the room.
 pub struct EncryptionInfo {
     /// The encryption algorithm that should be used to encrypt messages in the
@@ -144,7 +143,7 @@ impl From<&StateEventStub<EncryptionEventContent>> for EncryptionInfo {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Tombstone {
     /// A server-defined message.
     body: String,
@@ -158,7 +157,7 @@ enum MemberDirection {
     Exiting,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 /// A Matrix room.
 pub struct Room {
     /// The unique id of the room.
@@ -361,19 +360,30 @@ impl Room {
             member.name().into()
         } else {
             // There is no member with the requested MXID in the room. We still return the MXID.
-            id.as_ref().into()
+            id.as_str().into()
         }
     }
 
     fn add_member(&mut self, event: &StateEventStub<MemberEventContent>, room_id: &RoomId) -> bool {
-        if self
-            .members
-            .contains_key(&UserId::try_from(event.state_key.as_str()).unwrap())
+        let new_member = RoomMember::new(event, room_id);
+
+        if self.joined_members.contains_key(&new_member.user_id)
+            || self.invited_members.contains_key(&new_member.user_id)
         {
             return false;
         }
 
-        let member = RoomMember::new(event, room_id);
+        match event.membership_change() {
+            MembershipChange::Joined => self
+                .joined_members
+                .insert(new_member.user_id.clone(), new_member.clone()),
+            MembershipChange::Invited => self
+                .invited_members
+                .insert(new_member.user_id.clone(), new_member.clone()),
+            _ => {
+                panic!("Room::add_member called on an event that is neither a join nor an invite.")
+            }
+        };
 
         // Perform display name disambiguations, if necessary.
         let disambiguations = self.disambiguation_updates(&new_member, MemberDirection::Entering);
@@ -390,8 +400,12 @@ impl Room {
     /// Process the member event of a leaving user.
     ///
     /// Returns true if this made a change to the room's state, false otherwise.
-    fn remove_member(&mut self, event: &StateEventStub<MemberEventContent>) -> bool {
-        let leaving_member = RoomMember::new(event);
+    fn remove_member(
+        &mut self,
+        event: &StateEventStub<MemberEventContent>,
+        room_id: &RoomId,
+    ) -> bool {
+        let leaving_member = RoomMember::new(event, room_id);
 
         // Perform display name disambiguations, if necessary.
         let disambiguations =
@@ -587,12 +601,12 @@ impl Room {
         // TODO: This would not be handled correctly as all the MemberEvents have the `prev_content`
         // inside of `unsigned` field.
         match event.membership_change() {
-            Invited | Joined => self.add_member(event),
+            Invited | Joined => self.add_member(event, room_id),
             Kicked | Banned | KickedAndBanned | InvitationRejected | Left => {
-                self.remove_member(event)
+                self.remove_member(event, room_id)
             }
-            ProfileChanged => {
-                let user = if let Ok(id) = UserId::try_from(event.state_key.as_str()) {
+            ProfileChanged { .. } => {
+                let user_id = if let Ok(id) = UserId::try_from(event.state_key.as_str()) {
                     id
                 } else {
                     return false;
@@ -968,23 +982,23 @@ mod test {
         let mut event_builder = EventBuilder::new();
 
         let mut member1_join_sync_response = event_builder
-            .add_room_event(EventsJson::Member, RoomEvent::RoomMember)
+            .add_room_event(EventsJson::Member)
             .build_sync_response();
 
         let mut member2_join_sync_response = event_builder
-            .add_custom_joined_event(&room_id, member2_join_event, RoomEvent::RoomMember)
+            .add_custom_joined_event(&room_id, member2_join_event)
             .build_sync_response();
 
         let mut member3_join_sync_response = event_builder
-            .add_custom_joined_event(&room_id, member3_join_event, RoomEvent::RoomMember)
+            .add_custom_joined_event(&room_id, member3_join_event)
             .build_sync_response();
 
         let mut member2_leave_sync_response = event_builder
-            .add_custom_joined_event(&room_id, member2_leave_event, RoomEvent::RoomMember)
+            .add_custom_joined_event(&room_id, member2_leave_event)
             .build_sync_response();
 
         let mut member3_leave_sync_response = event_builder
-            .add_custom_joined_event(&room_id, member3_leave_event, RoomEvent::RoomMember)
+            .add_custom_joined_event(&room_id, member3_leave_event)
             .build_sync_response();
 
         // First member with display name "example" joins
@@ -1052,8 +1066,8 @@ mod test {
         let user_id = UserId::try_from("@example:localhost").unwrap();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Member)
-            .add_state_event(EventsFile::PowerLevels)
+            .add_state_event(EventsJson::Member)
+            .add_state_event(EventsJson::PowerLevels)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();
@@ -1081,7 +1095,7 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Aliases)
+            .add_state_event(EventsJson::Aliases)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();
@@ -1099,7 +1113,7 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Alias)
+            .add_state_event(EventsJson::Alias)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();
@@ -1117,7 +1131,7 @@ mod test {
         let room_id = get_room_id();
 
         let mut response = EventBuilder::default()
-            .add_state_event(EventsFile::Name)
+            .add_state_event(EventsJson::Name)
             .build_sync_response();
 
         client.receive_sync_response(&mut response).await.unwrap();
