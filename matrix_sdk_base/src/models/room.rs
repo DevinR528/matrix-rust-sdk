@@ -18,7 +18,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
 
 #[cfg(feature = "messages")]
-use super::message::MessageQueue;
+use super::message::{MessageQueue, MessageWrapper};
 use super::RoomMember;
 
 use crate::api::r0::sync::sync_events::{RoomSummary, UnreadNotificationsCount};
@@ -37,12 +37,6 @@ use crate::events::room::{
 use crate::events::{
     Algorithm, AnyMessageEventStub, AnyRoomEventStub, AnyStateEventStub, AnyStrippedStateEventStub,
     EventType, StateEventStub, StrippedStateEventStub,
-};
-
-#[cfg(feature = "messages")]
-use crate::events::{
-    room::message::{MessageEventContent, TextMessageEventContent},
-    MessageEventStub,
 };
 
 use crate::identifiers::{RoomAliasId, RoomId, UserId};
@@ -629,7 +623,7 @@ impl Room {
     /// Returns true if `MessageQueue` was added to.
     #[cfg(feature = "messages")]
     #[cfg_attr(docsrs, doc(cfg(feature = "messages")))]
-    pub fn handle_message(&mut self, event: &MessageEventStub<MessageEventContent>) -> bool {
+    pub fn handle_message(&mut self, event: &AnyMessageEventStub) -> bool {
         self.messages.push(event.clone())
     }
 
@@ -642,10 +636,10 @@ impl Room {
         if let Some(msg) = self
             .messages
             .iter_mut()
-            .find(|msg| event.redacts == msg.event_id)
+            .find(|msg| &event.redacts == msg.event_id())
         {
             // TODO make msg an enum or use AnyMessageEventStub enum to represent
-            msg.content = MessageEventContent::Text(TextMessageEventContent::new_plain("Redacted"));
+            *msg = MessageWrapper(AnyMessageEventStub::RoomRedaction(event.clone()));
             true
         } else {
             false
@@ -755,7 +749,9 @@ impl Room {
             },
             AnyRoomEventStub::Message(event) => match &event {
                 #[cfg(feature = "messages")]
-                AnyMessageEventStub::RoomMessage(event) => self.handle_message(&event),
+                // We ignore this variants event because `handle_message` takes the enum
+                // to store AnyMessageEventStub events in the `MessageQueue`.
+                AnyMessageEventStub::RoomMessage(_) => self.handle_message(&event),
                 #[cfg(feature = "messages")]
                 AnyMessageEventStub::RoomRedaction(event) => self.handle_redaction(&event),
                 _ => false,

@@ -41,7 +41,7 @@ pub struct RoomMember {
     /// If the user should be considered active.
     pub currently_active: Option<bool>,
     /// The unique id of the room.
-    pub room_id: Option<RoomId>,
+    pub room_id: RoomId,
     /// If the member is typing.
     pub typing: Option<bool>,
     /// The presence of the user, if found.
@@ -76,7 +76,7 @@ impl RoomMember {
     pub fn new(event: &StateEventStub<MemberEventContent>, room_id: &RoomId) -> Self {
         Self {
             name: event.state_key.clone(),
-            room_id: Some(room_id.clone()),
+            room_id: room_id.clone(),
             user_id: UserId::try_from(event.state_key.as_str()).unwrap(),
             display_name: event.content.displayname.clone(),
             avatar_url: event.content.avatar_url.clone(),
