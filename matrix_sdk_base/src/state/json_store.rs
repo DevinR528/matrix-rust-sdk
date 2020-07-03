@@ -195,16 +195,25 @@ impl StateStore for JsonStore {
 mod test {
     use super::*;
 
+    use http::Response;
     use std::convert::TryFrom;
+    use std::fs::File;
+    use std::io::Read;
     use std::path::PathBuf;
 
     use tempfile::tempdir;
 
+    use crate::api::r0::sync::sync_events::Response as SyncResponse;
     use crate::identifiers::{RoomId, UserId};
-    use crate::push::Ruleset;
     use crate::{BaseClient, BaseClientConfig, Session};
 
-    use matrix_sdk_test::{sync_response, SyncResponseFile};
+    fn sync_response(file: &str) -> SyncResponse {
+        let mut file = File::open(file).unwrap();
+        let mut data = vec![];
+        file.read_to_end(&mut data).unwrap();
+        let response = Response::builder().body(data).unwrap();
+        SyncResponse::try_from(response).unwrap()
+    }
 
     #[tokio::test]
     async fn test_store_client_state() {
@@ -222,7 +231,7 @@ mod test {
         let state = ClientState {
             sync_token: Some("hello".into()),
             ignored_users: vec![user],
-            push_ruleset: None::<Ruleset>,
+            push_ruleset: None,
         };
 
         let mut path_with_user = PathBuf::from(path);
@@ -355,7 +364,7 @@ mod test {
             BaseClient::new_with_config(BaseClientConfig::new().state_store(store)).unwrap();
         client.restore_login(session.clone()).await.unwrap();
 
-        let mut response = sync_response(SyncResponseFile::Default);
+        let mut response = sync_response("../test_data/sync.json");
 
         // gather state to save to the db, the first time through loading will be skipped
         client.receive_sync_response(&mut response).await.unwrap();
