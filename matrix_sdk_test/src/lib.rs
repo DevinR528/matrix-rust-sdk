@@ -6,13 +6,8 @@ use http::Response;
 
 use matrix_sdk_common::api::r0::sync::sync_events::Response as SyncResponse;
 use matrix_sdk_common::events::{
-    collections::{
-        all::{RoomEvent, StateEvent},
-        only::Event,
-    },
-    presence::PresenceEvent,
-    stripped::AnyStrippedStateEvent,
-    EventJson, TryFromRaw,
+    presence::PresenceEvent, AnyBasicEvent, AnyEphemeralRoomEventContent, AnyRoomEventStub,
+    AnyStateEventStub, EphemeralRoomEventStub,
 };
 use matrix_sdk_common::identifiers::RoomId;
 use serde_json::Value as JsonValue;
@@ -22,6 +17,9 @@ pub use matrix_sdk_test_macros::async_test;
 pub mod test_json;
 
 /// Static `serde_json::Value`s
+type AnyEphemeralRoomEventStub = EphemeralRoomEventStub<AnyEphemeralRoomEventContent>;
+
+/// Embedded event files
 #[derive(Debug)]
 pub enum EventsJson {
     Alias,
@@ -51,177 +49,149 @@ pub enum EventsJson {
 #[derive(Default)]
 pub struct EventBuilder {
     /// The events that determine the state of a `Room`.
-    joined_room_events: HashMap<RoomId, Vec<RoomEvent>>,
+    joined_room_events: HashMap<RoomId, Vec<AnyRoomEventStub>>,
     /// The events that determine the state of a `Room`.
-    invited_room_events: HashMap<RoomId, Vec<AnyStrippedStateEvent>>,
+    invited_room_events: HashMap<RoomId, Vec<AnyStateEventStub>>,
     /// The events that determine the state of a `Room`.
-    left_room_events: HashMap<RoomId, Vec<RoomEvent>>,
+    left_room_events: HashMap<RoomId, Vec<AnyRoomEventStub>>,
     /// The presence events that determine the presence state of a `RoomMember`.
     presence_events: Vec<PresenceEvent>,
     /// The state events that determine the state of a `Room`.
-    state_events: Vec<StateEvent>,
+    state_events: Vec<AnyStateEventStub>,
     /// The ephemeral room events that determine the state of a `Room`.
-    ephemeral: Vec<Event>,
+    ephemeral: Vec<AnyEphemeralRoomEventStub>,
     /// The account data events that determine the state of a `Room`.
-    account_data: Vec<Event>,
+    account_data: Vec<AnyBasicEvent>,
+    /// Internal counter to enable the `prev_batch` and `next_batch` of each sync response to vary.
+    batch_counter: i64,
 }
 
 impl EventBuilder {
+    pub fn new() -> Self {
+        let builder: EventBuilder = Default::default();
+        builder
+    }
+
     /// Add an event to the room events `Vec`.
-    pub fn add_ephemeral<Ev: TryFromRaw>(
-        mut self,
-        json: EventsJson,
-        variant: fn(Ev) -> Event,
-    ) -> Self {
+    pub fn add_ephemeral(&mut self, json: EventsJson) -> &mut Self {
         let val: &JsonValue = match json {
             EventsJson::Typing => &test_json::TYPING,
             _ => panic!("unknown ephemeral event {:?}", json),
         };
 
-        let event = serde_json::from_value::<EventJson<Ev>>(val.clone())
-            .unwrap()
-            .deserialize()
-            .unwrap();
-        self.ephemeral.push(variant(event));
+        let event = serde_json::from_value::<AnyEphemeralRoomEventStub>(val.clone()).unwrap();
+        self.ephemeral.push(event);
         self
     }
 
     /// Add an event to the room events `Vec`.
     #[allow(clippy::match_single_binding, unused)]
-    pub fn add_account<Ev: TryFromRaw>(
-        mut self,
-        json: EventsJson,
-        variant: fn(Ev) -> Event,
-    ) -> Self {
+    pub fn add_account(&mut self, json: EventsJson) -> &mut Self {
         let val: &JsonValue = match json {
             _ => panic!("unknown account event {:?}", json),
         };
 
-        let event = serde_json::from_value::<EventJson<Ev>>(val.clone())
-            .unwrap()
-            .deserialize()
-            .unwrap();
-        self.account_data.push(variant(event));
+        let event = serde_json::from_value::<AnyBasicEvent>(val.clone()).unwrap();
+        self.account_data.push(event);
         self
     }
 
     /// Add an event to the room events `Vec`.
-    pub fn add_room_event<Ev: TryFromRaw>(
-        mut self,
-        json: EventsJson,
-        variant: fn(Ev) -> RoomEvent,
-    ) -> Self {
+    pub fn add_room_event(&mut self, json: EventsJson) -> &mut Self {
         let val: &JsonValue = match json {
             EventsJson::Member => &test_json::MEMBER,
             EventsJson::PowerLevels => &test_json::POWER_LEVELS,
             _ => panic!("unknown room event json {:?}", json),
         };
 
-        let event = serde_json::from_value::<EventJson<Ev>>(val.clone())
-            .unwrap()
-            .deserialize()
-            .unwrap();
+        let event = serde_json::from_value::<AnyRoomEventStub>(val.clone()).unwrap();
+
         self.add_joined_event(
             &RoomId::try_from("!SVkFJHzfwvuaIEawgC:localhost").unwrap(),
-            variant(event),
+            event,
         );
         self
     }
 
-    pub fn add_custom_joined_event<Ev: TryFromRaw>(
-        mut self,
+    pub fn add_custom_joined_event(
+        &mut self,
         room_id: &RoomId,
         event: serde_json::Value,
-        variant: fn(Ev) -> RoomEvent,
-    ) -> Self {
-        let event = serde_json::from_value::<EventJson<Ev>>(event)
-            .unwrap()
-            .deserialize()
-            .unwrap();
-        self.add_joined_event(room_id, variant(event));
+    ) -> &mut Self {
+        let event = serde_json::from_value::<AnyRoomEventStub>(event).unwrap();
+        self.add_joined_event(room_id, event);
         self
     }
 
-    fn add_joined_event(&mut self, room_id: &RoomId, event: RoomEvent) {
+    fn add_joined_event(&mut self, room_id: &RoomId, event: AnyRoomEventStub) {
         self.joined_room_events
             .entry(room_id.clone())
             .or_insert_with(Vec::new)
             .push(event);
     }
 
-    pub fn add_custom_invited_event<Ev: TryFromRaw>(
-        mut self,
+    pub fn add_custom_invited_event(
+        &mut self,
         room_id: &RoomId,
         event: serde_json::Value,
-        variant: fn(Ev) -> AnyStrippedStateEvent,
-    ) -> Self {
-        let event = serde_json::from_value::<EventJson<Ev>>(event)
-            .unwrap()
-            .deserialize()
-            .unwrap();
+    ) -> &mut Self {
+        let event = serde_json::from_value::<AnyStateEventStub>(event).unwrap();
         self.invited_room_events
             .entry(room_id.clone())
             .or_insert_with(Vec::new)
-            .push(variant(event));
+            .push(event);
         self
     }
 
-    pub fn add_custom_left_event<Ev: TryFromRaw>(
-        mut self,
+    pub fn add_custom_left_event(
+        &mut self,
         room_id: &RoomId,
         event: serde_json::Value,
-        variant: fn(Ev) -> RoomEvent,
-    ) -> Self {
-        let event = serde_json::from_value::<EventJson<Ev>>(event)
-            .unwrap()
-            .deserialize()
-            .unwrap();
+    ) -> &mut Self {
+        let event = serde_json::from_value::<AnyRoomEventStub>(event).unwrap();
         self.left_room_events
             .entry(room_id.clone())
             .or_insert_with(Vec::new)
-            .push(variant(event));
+            .push(event);
         self
     }
 
     /// Add a state event to the state events `Vec`.
-    pub fn add_state_event<Ev: TryFromRaw>(
-        mut self,
-        json: EventsJson,
-        variant: fn(Ev) -> StateEvent,
-    ) -> Self {
+    pub fn add_state_event(&mut self, json: EventsJson) -> &mut Self {
         let val: &JsonValue = match json {
             EventsJson::Alias => &test_json::ALIAS,
             EventsJson::Aliases => &test_json::ALIASES,
             EventsJson::Name => &test_json::NAME,
+            EventsJson::Member => &test_json::MEMBER,
+            EventsJson::PowerLevels => &test_json::POWER_LEVELS,
             _ => panic!("unknown state event {:?}", json),
         };
 
-        let event = serde_json::from_value::<EventJson<Ev>>(val.clone())
-            .unwrap()
-            .deserialize()
-            .unwrap();
-        self.state_events.push(variant(event));
+        let event = serde_json::from_value::<AnyStateEventStub>(val.clone()).unwrap();
+        self.state_events.push(event);
         self
     }
 
     /// Add an presence event to the presence events `Vec`.
-    pub fn add_presence_event(mut self, json: EventsJson) -> Self {
+    pub fn add_presence_event(&mut self, json: EventsJson) -> &mut Self {
         let val: &JsonValue = match json {
             EventsJson::Presence => &test_json::PRESENCE,
             _ => panic!("unknown presence event {:?}", json),
         };
 
-        let event = serde_json::from_value::<EventJson<PresenceEvent>>(val.clone())
-            .unwrap()
-            .deserialize()
-            .unwrap();
+        let event = serde_json::from_value::<PresenceEvent>(val.clone()).unwrap();
         self.presence_events.push(event);
         self
     }
 
-    /// Consumes `ResponseBuilder and returns SyncResponse.
-    pub fn build_sync_response(mut self) -> SyncResponse {
+    /// Consumes `ResponseBuilder` and returns `SyncResponse`.
+    pub fn build_sync_response(&mut self) -> SyncResponse {
         let main_room_id = RoomId::try_from("!SVkFJHzfwvuaIEawgC:localhost").unwrap();
+
+        // First time building a sync response, so initialize the `prev_batch` to a default one.
+        let prev_batch = self.generate_sync_token();
+        self.batch_counter += 1;
+        let next_batch = self.generate_sync_token();
 
         // TODO generalize this.
         let joined_room = serde_json::json!({
@@ -238,7 +208,7 @@ impl EventBuilder {
             "timeline": {
                 "events": self.joined_room_events.remove(&main_room_id).unwrap_or_default(),
                 "limited": true,
-                "prev_batch": "t392-516_47314_0_7_1_1_1_11444_1"
+                "prev_batch": prev_batch
             },
             "unread_notifications": {
                 "highlight_count": 0,
@@ -265,7 +235,7 @@ impl EventBuilder {
                 "timeline": {
                     "events": events,
                     "limited": true,
-                    "prev_batch": "t392-516_47314_0_7_1_1_1_11444_1"
+                    "prev_batch": prev_batch
                 },
                 "unread_notifications": {
                     "highlight_count": 0,
@@ -285,7 +255,7 @@ impl EventBuilder {
                 "timeline": {
                     "events": events,
                     "limited": false,
-                    "prev_batch": "t392-516_47314_0_7_1_1_1_11444_1"
+                    "prev_batch": prev_batch
                 },
             });
             left_rooms.insert(room_id, room);
@@ -305,7 +275,7 @@ impl EventBuilder {
         let body = serde_json::json! {
             {
                 "device_one_time_keys_count": {},
-                "next_batch": "s526_47314_0_7_1_1_1_11444_1",
+                "next_batch": next_batch,
                 "device_lists": {
                     "changed": [],
                     "left": []
@@ -327,6 +297,10 @@ impl EventBuilder {
             .body(serde_json::to_vec(&body).unwrap())
             .unwrap();
         SyncResponse::try_from(response).unwrap()
+    }
+
+    fn generate_sync_token(&self) -> String {
+        format!("t392-516_47314_0_7_1_1_1_11444_{}", self.batch_counter)
     }
 }
 

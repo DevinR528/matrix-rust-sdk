@@ -48,7 +48,7 @@ pub struct Account {
     shared: Arc<AtomicBool>,
 }
 
-#[cfg_attr(tarpaulin, skip)]
+// #[cfg_attr(tarpaulin, skip)]
 impl fmt::Debug for Account {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Account")
@@ -58,7 +58,7 @@ impl fmt::Debug for Account {
     }
 }
 
-#[cfg_attr(tarpaulin, skip)]
+// #[cfg_attr(tarpaulin, skip)]
 impl Default for Account {
     fn default() -> Self {
         Self::new()
@@ -234,6 +234,38 @@ impl Account {
             last_use_time: Arc::new(now),
         })
     }
+
+    /// Create a group session pair.
+    ///
+    /// This session pair can be used to encrypt and decrypt messages meant for
+    /// a large group of participants.
+    ///
+    /// The outbound session is used to encrypt messages while the inbound one
+    /// is used to decrypt messages encrypted by the outbound one.
+    ///
+    /// # Arguments
+    ///
+    /// * `room_id` - The ID of the room where the group session will be used.
+    pub async fn create_group_session_pair(
+        &self,
+        room_id: &RoomId,
+    ) -> (OutboundGroupSession, InboundGroupSession) {
+        let outbound = OutboundGroupSession::new(room_id);
+        let identity_keys = self.identity_keys();
+
+        let sender_key = identity_keys.curve25519();
+        let signing_key = identity_keys.ed25519();
+
+        let inbound = InboundGroupSession::new(
+            sender_key,
+            signing_key,
+            &room_id,
+            outbound.session_key().await,
+        )
+        .expect("Can't create inbound group session from a newly created outbound group session");
+
+        (outbound, inbound)
+    }
 }
 
 impl PartialEq for Account {
@@ -253,7 +285,7 @@ pub struct Session {
     pub(crate) last_use_time: Arc<Instant>,
 }
 
-#[cfg_attr(tarpaulin, skip)]
+// #[cfg_attr(tarpaulin, skip)]
 impl fmt::Debug for Session {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Session")
@@ -502,7 +534,7 @@ impl InboundGroupSession {
     }
 }
 
-#[cfg_attr(tarpaulin, skip)]
+// #[cfg_attr(tarpaulin, skip)]
 impl fmt::Debug for InboundGroupSession {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("InboundGroupSession")
@@ -611,7 +643,7 @@ impl OutboundGroupSession {
     }
 }
 
-#[cfg_attr(tarpaulin, skip)]
+// #[cfg_attr(tarpaulin, skip)]
 impl std::fmt::Debug for OutboundGroupSession {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("OutboundGroupSession")
