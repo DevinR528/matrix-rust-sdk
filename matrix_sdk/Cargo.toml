@@ -27,6 +27,9 @@ url = "2.1.1"
 matrix-sdk-common-macros = { version = "0.1.0", path = "../matrix_sdk_common_macros" }
 matrix-sdk-common = { version = "0.1.0", path = "../matrix_sdk_common" }
 
+webrtc-unreliable = "0.4.1"
+libp2p = "0.22.0"
+
 [dependencies.matrix-sdk-base]
 version = "0.1.0"
 path = "../matrix_sdk_base"
