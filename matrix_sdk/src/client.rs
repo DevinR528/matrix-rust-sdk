@@ -35,9 +35,8 @@ use std::future::Future;
 use tracing::{debug, warn};
 use tracing::{error, info, instrument, trace};
 
-use http::Method as HttpMethod;
 use http::Response as HttpResponse;
-use reqwest::header::{HeaderValue, InvalidHeaderValue, AUTHORIZATION};
+use reqwest::header::{HeaderValue, InvalidHeaderValue};
 use url::Url;
 
 use crate::events::room::message::MessageEventContent;
@@ -49,9 +48,8 @@ use crate::Endpoint;
 use crate::identifiers::DeviceId;
 
 use crate::api;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::VERSION;
-use crate::{Error, EventEmitter, Result};
+
+use crate::{DefaultHttpClient, EventEmitter, HttpClient, Result};
 use matrix_sdk_base::{BaseClient, BaseClientConfig, Room, Session, StateStore};
 
 const DEFAULT_SYNC_TIMEOUT: Duration = Duration::from_secs(30);
@@ -64,7 +62,7 @@ pub struct Client {
     /// The URL of the homeserver to connect to.
     homeserver: Url,
     /// The underlying HTTP client.
-    http_client: reqwest::Client,
+    http_client: Arc<dyn HttpClient>,
     /// User session data.
     pub(crate) base_client: BaseClient,
 }
@@ -103,11 +101,11 @@ impl Debug for Client {
 #[derive(Default)]
 pub struct ClientConfig {
     #[cfg(not(target_arch = "wasm32"))]
-    proxy: Option<reqwest::Proxy>,
-    user_agent: Option<HeaderValue>,
-    disable_ssl_verification: bool,
-    base_config: BaseClientConfig,
-    timeout: Option<Duration>,
+    pub(crate) proxy: Option<reqwest::Proxy>,
+    pub(crate) user_agent: Option<HeaderValue>,
+    pub(crate) disable_ssl_verification: bool,
+    pub(crate) base_config: BaseClientConfig,
+    pub(crate) timeout: Option<Duration>,
 }
 
 // #[cfg_attr(tarpaulin, skip)]
@@ -319,39 +317,7 @@ impl Client {
             Err(_e) => panic!("Error parsing homeserver url"),
         };
 
-        let http_client = reqwest::Client::builder();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let http_client = {
-            let http_client = match config.timeout {
-                Some(x) => http_client.timeout(x),
-                None => http_client,
-            };
-
-            let http_client = if config.disable_ssl_verification {
-                http_client.danger_accept_invalid_certs(true)
-            } else {
-                http_client
-            };
-
-            let http_client = match config.proxy {
-                Some(p) => http_client.proxy(p),
-                None => http_client,
-            };
-
-            let mut headers = reqwest::header::HeaderMap::new();
-
-            let user_agent = match config.user_agent {
-                Some(a) => a,
-                None => HeaderValue::from_str(&format!("matrix-rust-sdk {}", VERSION)).unwrap(),
-            };
-
-            headers.insert(reqwest::header::USER_AGENT, user_agent);
-
-            http_client.default_headers(headers)
-        };
-
-        let http_client = http_client.build()?;
+        let http_client = Arc::new(DefaultHttpClient::with_config(&config)?);
 
         let base_client = BaseClient::new_with_config(config.base_config)?;
 
@@ -1048,61 +1014,6 @@ impl Client {
         Ok(response)
     }
 
-    async fn send_request(
-        &self,
-        requires_auth: bool,
-        method: HttpMethod,
-        request: http::Request<Vec<u8>>,
-    ) -> Result<reqwest::Response> {
-        let url = request.uri();
-        let path_and_query = url.path_and_query().unwrap();
-        let mut url = self.homeserver.clone();
-
-        url.set_path(path_and_query.path());
-        url.set_query(path_and_query.query());
-
-        let request_builder = match method {
-            HttpMethod::GET => self.http_client.get(url),
-            HttpMethod::POST => {
-                let body = request.body().clone();
-                self.http_client
-                    .post(url)
-                    .body(body)
-                    .header(reqwest::header::CONTENT_TYPE, "application/json")
-            }
-            HttpMethod::PUT => {
-                let body = request.body().clone();
-                self.http_client
-                    .put(url)
-                    .body(body)
-                    .header(reqwest::header::CONTENT_TYPE, "application/json")
-            }
-            HttpMethod::DELETE => {
-                let body = request.body().clone();
-                self.http_client
-                    .delete(url)
-                    .body(body)
-                    .header(reqwest::header::CONTENT_TYPE, "application/json")
-            }
-            method => panic!("Unsupported method {}", method),
-        };
-
-        let request_builder = if requires_auth {
-            let session = self.base_client.session().read().await;
-
-            if let Some(session) = session.as_ref() {
-                let header_value = format!("Bearer {}", &session.access_token);
-                request_builder.header(AUTHORIZATION, header_value)
-            } else {
-                return Err(Error::AuthenticationRequired);
-            }
-        } else {
-            request_builder
-        };
-
-        Ok(request_builder.send().await?)
-    }
-
     async fn response_to_http_response(
         &self,
         mut response: reqwest::Response,
@@ -1164,8 +1075,11 @@ impl Client {
     ) -> Result<Request::Response> {
         let request: http::Request<Vec<u8>> = request.try_into()?;
         let response = self
+            .http_client
             .send_request(
                 Request::METADATA.requires_authentication,
+                &self.homeserver,
+                self.base_client.session(),
                 Request::METADATA.method,
                 request,
             )
@@ -1217,8 +1131,11 @@ impl Client {
     ) -> Result<Request::Response> {
         let request: http::Request<Vec<u8>> = request.try_into()?;
         let response = self
+            .http_client
             .send_request(
                 Request::METADATA.requires_authentication,
+                &self.homeserver,
+                self.base_client.session(),
                 Request::METADATA.method,
                 request,
             )

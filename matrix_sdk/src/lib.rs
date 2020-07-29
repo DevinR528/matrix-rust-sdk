@@ -25,16 +25,16 @@
 //! by default be stored only in memory and thus lost after the client is
 //! destroyed.
 
-// #![deny(
-//     missing_debug_implementations,
-//     dead_code,
-//     missing_docs,
-//     trivial_casts,
-//     trivial_numeric_casts,
-//     unused_extern_crates,
-//     unused_import_braces,
-//     unused_qualifications
-// )]
+#![deny(
+    missing_debug_implementations,
+    dead_code,
+    missing_docs,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications
+)]
 
 pub use matrix_sdk_base::Error as BaseError;
 #[cfg(not(target_arch = "wasm32"))]
@@ -51,10 +51,11 @@ pub use matrix_sdk_base::{Device, TrustState};
 
 mod client;
 mod error;
-mod http;
+mod http_client;
 mod request_builder;
 pub use client::{Client, ClientConfig, SyncSettings};
 pub use error::{Error, Result};
+pub use http_client::{DefaultHttpClient, HttpClient};
 pub use request_builder::{
     MessagesRequestBuilder, RegistrationBuilder, RoomBuilder, RoomListFilterBuilder,
 };
