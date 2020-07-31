@@ -15,6 +15,7 @@ default = ["encryption", "sqlite-cryptostore", "messages"]
 messages = ["matrix-sdk-base/messages"]
 encryption = ["matrix-sdk-base/encryption"]
 sqlite-cryptostore = ["matrix-sdk-base/sqlite-cryptostore"]
+p2p-client = []
 
 [dependencies]
 async-trait = "0.1.36"
@@ -27,6 +28,12 @@ url = "2.1.1"
 
 matrix-sdk-common-macros = { version = "0.1.0", path = "../matrix_sdk_common_macros" }
 matrix-sdk-common = { version = "0.1.0", path = "../matrix_sdk_common" }
+
+conduit = { git = "https://github.com/DevinR528/conduit", branch = "p2p", default-features = false }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.tokio]
+version = "0.2.21"
+default-features = false
+features = ["sync", "time", "fs"]
 
 [dependencies.matrix-sdk-base]
 version = "0.1.0"
