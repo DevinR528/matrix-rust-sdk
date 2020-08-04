@@ -53,13 +53,11 @@ pub use matrix_sdk_base::{Device, TrustState};
 mod client;
 mod error;
 mod http_client;
-mod p2p_client;
 mod request_builder;
 
 pub use client::{Client, ClientConfig, SyncSettings};
 pub use error::{Error, Result};
 pub use http_client::{DefaultHttpClient, HttpClient};
-pub use p2p_client::P2PClient;
 pub use request_builder::{
     MessagesRequestBuilder, RegistrationBuilder, RoomBuilder, RoomListFilterBuilder,
 };
