@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error",""]],"mod":[["api","(De)serializable types for the Matrix Application Service API. These types can be shared by application service and server code."]],"struct":[["Appservice","Appservice"],["AppserviceRegistration","Appservice Registration"]],"type":[["Host",""],["Port",""],["Result",""]]});

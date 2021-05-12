@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["matrix_sdk_appservice"] = [{"text":"impl ResponseError for <a class=\"enum\" href=\"matrix_sdk_appservice/enum.Error.html\" title=\"enum matrix_sdk_appservice::Error\">Error</a>","synthetic":false,"types":["matrix_sdk_appservice::error::Error"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

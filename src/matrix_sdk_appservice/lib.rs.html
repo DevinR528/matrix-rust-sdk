@@ -1,0 +1,669 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `matrix_sdk_appservice/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../matrix_sdk_appservice/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+                <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+</pre><pre class="rust">
+<span class="comment">// Copyright 2021 Famedly GmbH</span>
+<span class="comment">//</span>
+<span class="comment">// Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="comment">// you may not use this file except in compliance with the License.</span>
+<span class="comment">// You may obtain a copy of the License at</span>
+<span class="comment">//</span>
+<span class="comment">//     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="comment">//</span>
+<span class="comment">// Unless required by applicable law or agreed to in writing, software</span>
+<span class="comment">// distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="comment">// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="comment">// See the License for the specific language governing permissions and</span>
+<span class="comment">// limitations under the License.</span>
+
+<span class="doccomment">//! Matrix [Application Service] library</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The appservice crate aims to provide a batteries-included experience. That means that we</span>
+<span class="doccomment">//! * ship with functionality to configure your webserver crate or simply run the webserver for you</span>
+<span class="doccomment">//! * receive and validate requests from the homeserver correctly</span>
+<span class="doccomment">//! * allow calling the homeserver with proper virtual user identity assertion</span>
+<span class="doccomment">//! * have the goal to have a consistent room state available by leveraging the stores that the matrix-sdk provides</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Quickstart</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ```no_run</span>
+<span class="doccomment">//! # async {</span>
+<span class="doccomment">//! use matrix_sdk_appservice::{Appservice, AppserviceRegistration};</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let homeserver_url = &quot;http://127.0.0.1:8008&quot;;</span>
+<span class="doccomment">//! let server_name = &quot;localhost&quot;;</span>
+<span class="doccomment">//! let registration = AppserviceRegistration::try_from_yaml_str(</span>
+<span class="doccomment">//!     r&quot;</span>
+<span class="doccomment">//!         id: appservice</span>
+<span class="doccomment">//!         url: http://127.0.0.1:9009</span>
+<span class="doccomment">//!         as_token: as_token</span>
+<span class="doccomment">//!         hs_token: hs_token</span>
+<span class="doccomment">//!         sender_localpart: _appservice</span>
+<span class="doccomment">//!         namespaces:</span>
+<span class="doccomment">//!           users:</span>
+<span class="doccomment">//!           - exclusive: true</span>
+<span class="doccomment">//!             regex: &#39;@_appservice_.*&#39;</span>
+<span class="doccomment">//!     &quot;)</span>
+<span class="doccomment">//!     .unwrap();</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! let appservice = Appservice::new(homeserver_url, server_name, registration).await.unwrap();</span>
+<span class="doccomment">//! // set event handler with `appservice.client().set_event_handler()` here</span>
+<span class="doccomment">//! let (host, port) = appservice.get_host_and_port_from_registration().unwrap();</span>
+<span class="doccomment">//! appservice.run(host, port).await.unwrap();</span>
+<span class="doccomment">//! # };</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! [Application Service]: https://matrix.org/docs/spec/application_service/r0.1.2</span>
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>,)))]</span>
+<span class="macro">compile_error!</span>(<span class="string">&quot;one webserver feature must be enabled. available ones: `actix`&quot;</span>);
+
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
+    <span class="ident">fs::File</span>,
+    <span class="ident">ops::Deref</span>,
+    <span class="ident">path::PathBuf</span>,
+};
+
+<span class="kw">use</span> <span class="ident">http::Uri</span>;
+<span class="kw">use</span> <span class="ident">matrix_sdk</span>::{
+    <span class="ident">api</span>::{
+        <span class="ident">error::ErrorKind</span>,
+        <span class="ident">r0</span>::{
+            <span class="ident">account::register</span>::{<span class="ident">LoginType</span>, <span class="ident">Request</span> <span class="kw">as</span> <span class="ident">RegistrationRequest</span>},
+            <span class="ident">uiaa::UiaaResponse</span>,
+        },
+    },
+    <span class="ident">api_appservice::Registration</span>,
+    <span class="ident">assign</span>,
+    <span class="ident">identifiers</span>::{<span class="self">self</span>, <span class="ident">DeviceId</span>, <span class="ident">ServerNameBox</span>, <span class="ident">UserId</span>},
+    <span class="ident">reqwest::Url</span>,
+    <span class="ident">Client</span>, <span class="ident">ClientConfig</span>, <span class="ident">FromHttpResponseError</span>, <span class="ident">HttpError</span>, <span class="ident">RequestConfig</span>, <span class="ident">ServerError</span>, <span class="ident">Session</span>,
+};
+<span class="kw">use</span> <span class="ident">regex::Regex</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>))]</span>
+<span class="kw">use</span> <span class="ident">tracing::error</span>;
+<span class="kw">use</span> <span class="ident">tracing::warn</span>;
+
+<span class="attribute">#[<span class="ident">doc</span>(<span class="ident">inline</span>)]</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">matrix_sdk::api_appservice</span> <span class="kw">as</span> <span class="ident">api</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>)]</span>
+<span class="kw">mod</span> <span class="ident">actix</span>;
+<span class="kw">mod</span> <span class="ident">error</span>;
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">error::Error</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">std::result::Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Host</span> <span class="op">=</span> <span class="ident">String</span>;
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Port</span> <span class="op">=</span> <span class="ident">u16</span>;
+
+<span class="doccomment">/// Appservice Registration</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AppserviceRegistration</span> {
+    <span class="ident">inner</span>: <span class="ident">Registration</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">AppserviceRegistration</span> {
+    <span class="doccomment">/// Try to load registration from yaml string</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See the fields of [`Registration`] for the required format</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_from_yaml_str</span>(<span class="ident">value</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">inner</span>: <span class="ident">serde_yaml::from_str</span>(<span class="ident">value</span>.<span class="ident">as_ref</span>())<span class="question-mark">?</span>,
+        })
+    }
+
+    <span class="doccomment">/// Try to load registration from yaml file</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// See the fields of [`Registration`] for the required format</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">try_from_yaml_file</span>(<span class="ident">path</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">PathBuf</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">File::open</span>(<span class="ident">path</span>.<span class="ident">into</span>())<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">inner</span>: <span class="ident">serde_yaml::from_reader</span>(<span class="ident">file</span>)<span class="question-mark">?</span>,
+        })
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Registration</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AppserviceRegistration</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">Registration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> { <span class="ident">inner</span>: <span class="ident">value</span> }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">AppserviceRegistration</span> {
+    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">Registration</span>;
+
+    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">Self</span><span class="ident">::Target</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>
+    }
+}
+
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_client</span>(
+    <span class="ident">homeserver_url</span>: <span class="kw-2">&amp;</span><span class="ident">Url</span>,
+    <span class="ident">server_name</span>: <span class="kw-2">&amp;</span><span class="ident">ServerNameBox</span>,
+    <span class="ident">registration</span>: <span class="kw-2">&amp;</span><span class="ident">AppserviceRegistration</span>,
+    <span class="ident">localpart</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">localpart</span>.<span class="ident">is_some</span>() {
+        <span class="kw">let</span> <span class="ident">request_config</span> <span class="op">=</span> <span class="ident">RequestConfig::default</span>().<span class="ident">assert_identity</span>();
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ClientConfig::default</span>().<span class="ident">request_config</span>(<span class="ident">request_config</span>);
+        <span class="ident">Client::new_with_config</span>(<span class="ident">homeserver_url</span>.<span class="ident">clone</span>(), <span class="ident">config</span>)<span class="question-mark">?</span>
+    } <span class="kw">else</span> {
+        <span class="ident">Client::new</span>(<span class="ident">homeserver_url</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>
+    };
+
+    <span class="kw">let</span> <span class="ident">session</span> <span class="op">=</span> <span class="ident">Session</span> {
+        <span class="ident">access_token</span>: <span class="ident">registration</span>.<span class="ident">as_token</span>.<span class="ident">clone</span>(),
+        <span class="ident">user_id</span>: <span class="ident">UserId::parse_with_server_name</span>(
+            <span class="ident">localpart</span>.<span class="ident">unwrap_or</span>(<span class="kw-2">&amp;</span><span class="ident">registration</span>.<span class="ident">sender_localpart</span>),
+            <span class="kw-2">&amp;</span><span class="ident">server_name</span>,
+        )<span class="question-mark">?</span>,
+        <span class="ident">device_id</span>: <span class="ident">DeviceId::new</span>(),
+    };
+    <span class="ident">client</span>.<span class="ident">restore_login</span>(<span class="ident">session</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(<span class="ident">client</span>)
+}
+
+<span class="doccomment">/// Appservice</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Appservice</span> {
+    <span class="ident">homeserver_url</span>: <span class="ident">Url</span>,
+    <span class="ident">server_name</span>: <span class="ident">ServerNameBox</span>,
+    <span class="ident">registration</span>: <span class="ident">AppserviceRegistration</span>,
+    <span class="ident">client_sender_localpart</span>: <span class="ident">Client</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Appservice</span> {
+    <span class="doccomment">/// Create new Appservice</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Arguments</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// * `homeserver_url` - The homeserver that the client should connect to.</span>
+    <span class="doccomment">/// * `server_name` - The server name to use when constructing user ids from the localpart.</span>
+    <span class="doccomment">/// * `registration` - The [Appservice Registration] to use when interacting with the homserver.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [Appservice Registration]: https://matrix.org/docs/spec/application_service/r0.1.2#registration</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">homeserver_url</span>: <span class="kw">impl</span> <span class="ident">TryInto</span><span class="op">&lt;</span><span class="ident">Url</span>, <span class="ident">Error</span> <span class="op">=</span> <span class="ident">url::ParseError</span><span class="op">&gt;</span>,
+        <span class="ident">server_name</span>: <span class="kw">impl</span> <span class="ident">TryInto</span><span class="op">&lt;</span><span class="ident">ServerNameBox</span>, <span class="ident">Error</span> <span class="op">=</span> <span class="ident">identifiers::Error</span><span class="op">&gt;</span>,
+        <span class="ident">registration</span>: <span class="ident">AppserviceRegistration</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">homeserver_url</span> <span class="op">=</span> <span class="ident">homeserver_url</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">server_name</span> <span class="op">=</span> <span class="ident">server_name</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">create_client</span>(<span class="kw-2">&amp;</span><span class="ident">homeserver_url</span>, <span class="kw-2">&amp;</span><span class="ident">server_name</span>, <span class="kw-2">&amp;</span><span class="ident">registration</span>, <span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="ident">Appservice</span> {
+            <span class="ident">homeserver_url</span>,
+            <span class="ident">server_name</span>,
+            <span class="ident">registration</span>,
+            <span class="ident">client_sender_localpart</span>: <span class="ident">client</span>,
+        })
+    }
+
+    <span class="doccomment">/// Get `Client` for the user associated with the application service</span>
+    <span class="doccomment">/// (`sender_localpart` of the [registration])</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [registration]: https://matrix.org/docs/spec/application_service/r0.1.2#registration</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Client</span> {
+        <span class="self">self</span>.<span class="ident">client_sender_localpart</span>.<span class="ident">clone</span>()
+    }
+
+    <span class="doccomment">/// Get `Client` for the given `localpart`</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If the `localpart` is covered by the `namespaces` in the [registration] all requests to the</span>
+    <span class="doccomment">/// homeserver will [assert the identity] to the according virtual user.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [registration]: https://matrix.org/docs/spec/application_service/r0.1.2#registration</span>
+    <span class="doccomment">/// [assert the identity]:</span>
+    <span class="doccomment">/// https://matrix.org/docs/spec/application_service/r0.1.2#identity-assertion</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">client_with_localpart</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">localpart</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Client</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">user_id</span> <span class="op">=</span> <span class="ident">UserId::parse_with_server_name</span>(<span class="ident">localpart</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">server_name</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">localpart</span> <span class="op">=</span> <span class="ident">user_id</span>.<span class="ident">localpart</span>().<span class="ident">to_owned</span>();
+
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">create_client</span>(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">homeserver_url</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">server_name</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">registration</span>,
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">localpart</span>),
+        )
+        .<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="self">self</span>.<span class="ident">ensure_registered</span>(<span class="ident">localpart</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="ident">client</span>)
+    }
+
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">ensure_registered</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">localpart</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="macro">assign!</span>(<span class="ident">RegistrationRequest::new</span>(), {
+            <span class="ident">username</span>: <span class="prelude-val">Some</span>(<span class="ident">localpart</span>.<span class="ident">as_ref</span>()),
+            <span class="ident">login_type</span>: <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">LoginType::ApplicationService</span>),
+        });
+
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">client</span>().<span class="ident">register</span>(<span class="ident">request</span>).<span class="kw">await</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+            <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">error</span> {
+                <span class="ident">matrix_sdk::Error::Http</span>(<span class="ident">HttpError::UiaaError</span>(<span class="ident">FromHttpResponseError::Http</span>(
+                    <span class="ident">ServerError::Known</span>(<span class="ident">UiaaResponse::MatrixError</span>(<span class="kw-2">ref</span> <span class="ident">matrix_error</span>)),
+                ))) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">match</span> <span class="ident">matrix_error</span>.<span class="ident">kind</span> {
+                        <span class="ident">ErrorKind::UserInUse</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="comment">// TODO: persist the fact that we registered that user</span>
+                            <span class="macro">warn!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">matrix_error</span>.<span class="ident">message</span>);
+                        }
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>.<span class="ident">into</span>()),
+                    }
+                }
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>.<span class="ident">into</span>()),
+            },
+        }
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Get the Appservice [registration]</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [registration]: https://matrix.org/docs/spec/application_service/r0.1.2#registration</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">registration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Registration</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">registration</span>
+    }
+
+    <span class="doccomment">/// Compare the given `hs_token` against `registration.hs_token`</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Returns `true` if the tokens match, `false` otherwise.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hs_token_matches</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">hs_token</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">registration</span>.<span class="ident">hs_token</span> <span class="op">=</span><span class="op">=</span> <span class="ident">hs_token</span>.<span class="ident">as_ref</span>()
+    }
+
+    <span class="doccomment">/// Check if given `user_id` is in any of the registration user namespaces</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">user_id_is_in_namespace</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">user_id</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
+        <span class="kw">for</span> <span class="ident">user</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">registration</span>.<span class="ident">namespaces</span>.<span class="ident">users</span> {
+            <span class="comment">// TODO: precompile on Appservice construction</span>
+            <span class="kw">let</span> <span class="ident">re</span> <span class="op">=</span> <span class="ident">Regex::new</span>(<span class="kw-2">&amp;</span><span class="ident">user</span>.<span class="ident">regex</span>)<span class="question-mark">?</span>;
+            <span class="kw">if</span> <span class="ident">re</span>.<span class="ident">is_match</span>(<span class="ident">user_id</span>.<span class="ident">as_ref</span>()) {
+                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>);
+            }
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="bool-val">false</span>)
+    }
+
+    <span class="doccomment">/// Get the host and port from the registration URL</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If no port is found it falls back to scheme defaults: 80 for http and 443 for https</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_host_and_port_from_registration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Host</span>, <span class="ident">Port</span>)<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">uri</span> <span class="op">=</span> <span class="ident">Uri::try_from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">registration</span>.<span class="ident">url</span>)<span class="question-mark">?</span>;
+
+        <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="ident">uri</span>.<span class="ident">host</span>().<span class="ident">ok_or</span>(<span class="ident">Error::MissingRegistrationHost</span>)<span class="question-mark">?</span>.<span class="ident">to_owned</span>();
+        <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">uri</span>.<span class="ident">port</span>() {
+            <span class="prelude-val">Some</span>(<span class="ident">port</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">port</span>.<span class="ident">as_u16</span>()),
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">uri</span>.<span class="ident">scheme_str</span>() {
+                <span class="prelude-val">Some</span>(<span class="string">&quot;http&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="number">80</span>),
+                <span class="prelude-val">Some</span>(<span class="string">&quot;https&quot;</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="number">443</span>),
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error::MissingRegistrationPort</span>),
+            },
+        }<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((<span class="ident">host</span>, <span class="ident">port</span>))
+    }
+
+    <span class="doccomment">/// Service to register on an Actix `App`</span>
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>)))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">actix_service</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">actix::Scope</span> {
+        <span class="ident">actix::get_scope</span>().<span class="ident">data</span>(<span class="self">self</span>.<span class="ident">clone</span>())
+    }
+
+    <span class="doccomment">/// Convenience method that runs an http server depending on the selected server feature</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// This is a blocking call that tries to listen on the provided host and port</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">host</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span>, <span class="ident">port</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>)]</span>
+        {
+            <span class="ident">actix::run_server</span>(<span class="self">self</span>.<span class="ident">clone</span>(), <span class="ident">host</span>, <span class="ident">port</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(())
+        }
+
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;actix&quot;</span>,)))]</span>
+        <span class="macro">unreachable!</span>()
+    }
+}
+</pre></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="matrix_sdk_appservice" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script></body></html>
